@@ -1,0 +1,49 @@
+id: mvp-07
+title: Color Palette Generation
+phase: MVP
+priority: high
+estimated_duration: 1hr
+status: completed
+
+description: |
+  Implement HSL-based color palette generation using seeded randomness
+  to create harmonious, pleasing color schemes for each session.
+
+acceptance_criteria:
+  - Palette generator using HSL color space
+  - Seed influences hue base and range
+  - High saturation (60-90%) and medium lightness (40-70%)
+  - Palette produces 2-4 harmonious colors
+  - Colors applied to particles (gradient or per-particle variation)
+  - No harsh or jarring color combinations
+
+tasks:
+  - Create src/utils/colors.js module
+  - Implement generatePalette(seed) function
+  - Use seeded RNG to determine hue base (0-360)
+  - Calculate hue range for related colors (30-90 degrees)
+  - Generate 2-4 colors within hue range
+  - Ensure high saturation and medium lightness
+  - Apply colors to particles (uniform or varied per particle)
+  - Test with multiple seeds for visual quality
+  - Optional: Add color interpolation for gradients
+
+dependencies:
+  - mvp-06
+  - mvp-04
+
+technical_notes: |
+  - HSL format: hsl(hue, saturation%, lightness%)
+  - Convert HSL to RGB for Three.js Color if needed
+  - Consider analogous, complementary, or triadic color schemes
+  - Particles can share palette or pick randomly from palette
+
+references:
+  - prd.md#Animation Behavior
+  - memory-bank/systemPatterns.md#Visual Aesthetics
+  - memory-bank/projectRules.md#Color Palettes
+  - memory-bank/quick-start.md#Color Palette Generation
+
+deliverables:
+  - src/utils/colors.js
+  - Particles rendering with harmonious colors

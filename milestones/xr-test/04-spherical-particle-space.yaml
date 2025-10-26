@@ -1,0 +1,50 @@
+id: xr-04
+title: 360° Spherical Particle Space
+phase: XR-Test
+priority: high
+estimated_duration: 2hr
+status: pending
+
+description: |
+  Adapt the particle system from 2D planar space to 3D spherical space surrounding
+  the camera, ensuring particles are visible in all directions for 360° viewing.
+
+acceptance_criteria:
+  - Particles initialized in 3D spherical volume around origin
+  - Particle bounds changed from 2D rectangle to 3D sphere
+  - Boundary wrapping adapted for spherical space
+  - Particle density feels appropriate in VR (not too sparse/dense)
+  - Flocking behaviors work in 3D space
+  - All particles visible from center camera position
+
+tasks:
+  - Modify particle initialization to distribute in 3D sphere
+  - Update boundary checks from 2D wrap to 3D spherical bounds
+  - Adjust particle count for 360° visibility (may need more particles)
+  - Verify flocking behaviors work in 3D (cohesion, alignment, separation)
+  - Test simplex noise drift in 3D space
+  - Tune particle distribution radius (e.g., 5-20 units from origin)
+
+dependencies:
+  - xr-02
+  - mvp-04
+  - mvp-05
+
+technical_notes: |
+  - Use spherical coordinates for particle initialization: (r, theta, phi)
+  - Radius range: inner = 5, outer = 20 (tuneable)
+  - Boundary wrapping: if distance > maxRadius, wrap to opposite side
+  - 3D neighbor detection: Euclidean distance in 3D
+  - May need to increase particle count (500 → 1000+) for 360° coverage
+  - Simplex noise already supports 3D (noise.noise3D(x, y, z + time))
+
+references:
+  - memory-bank/systemPatterns.md#Particle System
+  - milestones/mvp/04-particle-system-foundation.yaml
+  - milestones/mvp/05-organic-motion-behaviors.yaml
+
+deliverables:
+  - Updated ParticleSystem initialization for 3D sphere
+  - 3D boundary wrapping logic
+  - Adjusted particle count for VR
+  - Verified flocking in 3D space

@@ -1,0 +1,42 @@
+id: mvp-02
+title: HTML/CSS Shell
+phase: MVP
+priority: critical
+estimated_duration: 20min
+status: completed
+
+description: |
+  Create minimal HTML structure and CSS for full-screen canvas rendering
+  with no visible UI elements.
+
+acceptance_criteria:
+  - Full-screen canvas with no margins/padding
+  - No scrollbars or overflow
+  - Canvas fills viewport on all screen sizes
+  - No visible UI elements (clean, minimal)
+  - Proper viewport meta tags for mobile
+
+tasks:
+  - Create index.html with minimal structure
+  - Add viewport meta tags for mobile support
+  - Create CSS for full-screen canvas (100vw/100vh, no margins)
+  - Remove default body margins/padding
+  - Set canvas display properties
+  - Test responsive behavior
+
+dependencies:
+  - mvp-01
+
+technical_notes: |
+  - CSS should use modern flexbox or position: fixed
+  - Ensure touch-action: none for mobile interaction later
+  - Background color should be configurable (black default)
+
+references:
+  - prd.md#Visual Style
+  - memory-bank/projectRules.md#Visual Quality Standards
+
+deliverables:
+  - index.html
+  - style.css (or inline styles)
+  - Full-screen canvas that resizes with window

@@ -1,0 +1,54 @@
+id: xr-06
+title: XR Testing and Optimization
+phase: XR-Test
+priority: high
+estimated_duration: 2hr
+status: pending
+
+description: |
+  Test the WebXR implementation on VR devices, optimize performance for target
+  frame rates, and ensure graceful degradation on lower-end hardware.
+
+acceptance_criteria:
+  - VR mode tested on at least one VR device (Quest, Vive, etc.)
+  - Frame rate meets VR minimums (72fps+)
+  - No motion sickness triggers (stable frame rate, low latency)
+  - Particle density appropriate for VR viewing
+  - Adaptive quality reduces particles if FPS drops
+  - 2D mode still works (no regressions)
+
+tasks:
+  - Test on Meta Quest (browser or via WebXR API)
+  - Test on desktop VR headset (if available)
+  - Profile VR performance (Chrome DevTools VR profiling)
+  - Optimize particle count for VR performance
+  - Verify adaptive quality system works in VR
+  - Test 2D mode still functions correctly
+  - Document VR performance characteristics
+  - Create XR testing guide (similar to TESTING.md)
+
+dependencies:
+  - xr-01
+  - xr-02
+  - xr-03
+  - xr-04
+  - xr-05
+
+technical_notes: |
+  - VR performance is critical - 72fps minimum to avoid nausea
+  - Quest 2/3 browser supports WebXR
+  - Desktop testing: Chrome with SteamVR or Oculus runtime
+  - Particle count may need reduction (1000 → 500) for mobile VR
+  - Use performance.now() or XRFrame.predictedDisplayTime for timing
+  - Adaptive quality should be more aggressive in VR (reduce at 75fps)
+
+references:
+  - milestones/mvp/09-performance-monitoring.yaml
+  - milestones/mvp/10-testing-optimization.yaml
+  - memory-bank/systemPatterns.md#Performance Patterns
+
+deliverables:
+  - VR testing report (device, FPS, experience quality)
+  - Performance optimization recommendations
+  - XR testing guide (TESTING-XR.md)
+  - Verified 2D mode compatibility

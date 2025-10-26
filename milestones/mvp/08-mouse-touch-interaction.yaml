@@ -1,0 +1,50 @@
+id: mvp-08
+title: Mouse and Touch Interaction
+phase: MVP
+priority: high
+estimated_duration: 1.5hr
+status: completed
+
+description: |
+  Implement mouse and touch interaction that creates localized attraction
+  or repulsion forces on particles, with subtle, non-disruptive behavior.
+
+acceptance_criteria:
+  - Mouse position tracked in normalized coordinates
+  - Touch position tracked for mobile devices
+  - Particles respond to cursor/touch with attraction or repulsion
+  - Interaction feels subtle and natural (not jarring)
+  - Force strength decreases with distance (inverse square or linear)
+  - No visible pointer or UI overlays
+  - Works on both desktop and mobile
+
+tasks:
+  - Add mousemove event listener to canvas
+  - Normalize mouse coordinates to Three.js space (-1 to 1)
+  - Add touchstart/touchmove event listeners for mobile
+  - Create calculateAttraction() method in behaviors.js
+  - Implement distance-based force calculation
+  - Add applyUserAttraction() to ParticleSystem update
+  - Tune force strength and radius for subtlety
+  - Test on desktop (mouse) and mobile (touch)
+  - Optional: Add slight repulsion on click/touch for variety
+
+dependencies:
+  - mvp-05
+
+technical_notes: |
+  - Normalize mouse: x = (clientX / width) * 2 - 1, y = -(clientY / height) * 2 + 1
+  - Use raycaster or manual distance calculation (Vector3.distanceTo)
+  - Force = strength / (distance^2 + epsilon) for smooth falloff
+  - Consider adding interaction radius (only affect nearby particles)
+  - Touch events: use touches[0] for single touch
+
+references:
+  - prd.md#Interaction
+  - memory-bank/systemPatterns.md#Interaction Layer
+  - memory-bank/quick-start.md#Mouse/Touch Handling
+
+deliverables:
+  - Mouse/touch event handlers in src/main.js
+  - Interaction behavior in src/particles/behaviors.js
+  - Visible particle response to cursor/touch

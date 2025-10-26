@@ -1,0 +1,51 @@
+id: xr-03
+title: WebXR Session Management
+phase: XR-Test
+priority: critical
+estimated_duration: 1.5hr
+status: pending
+
+description: |
+  Implement WebXR session initialization, VR mode entry/exit, and integrate
+  with Three.js WebXRManager for immersive-vr rendering.
+
+acceptance_criteria:
+  - VR session starts when user triggers VR mode
+  - renderer.xr.enabled properly configured
+  - WebXR reference space set to 'local' or 'viewer'
+  - VR session ends gracefully on exit
+  - Error handling for VR session failures
+  - Session state tracked (active/inactive)
+
+tasks:
+  - Enable WebXR on renderer (renderer.xr.enabled = true)
+  - Implement VR button with VRButton helper or custom UI
+  - Request 'immersive-vr' session via navigator.xr.requestSession()
+  - Set reference space to 'local' (stationary viewer)
+  - Handle session start/end events
+  - Implement error handling for unsupported devices
+  - Test enter/exit VR flow
+
+dependencies:
+  - xr-01
+  - xr-02
+
+technical_notes: |
+  - Three.js provides VRButton.createButton(renderer) helper
+  - Session mode: 'immersive-vr' for headsets, 'inline' for magic window
+  - Reference space 'local' = stationary, 'viewer' = head-tracked only
+  - renderer.xr.setSession(session) connects WebXR to Three.js
+  - Use renderer.setAnimationLoop() instead of requestAnimationFrame for VR
+  - Session requires user gesture (button click) to start
+
+references:
+  - https://threejs.org/docs/#api/en/renderers/webxr/WebXRManager
+  - https://threejs.org/examples/webxr_vr_ballshooter.html
+  - memory-bank/systemPatterns.md#Animation Loop
+
+deliverables:
+  - VR session initialization code
+  - VR button UI element
+  - Session state management
+  - Error handling for VR failures
+  - Enter/exit VR event handlers

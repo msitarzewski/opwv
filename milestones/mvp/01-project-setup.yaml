@@ -1,0 +1,43 @@
+id: mvp-01
+title: Project Setup and Dependencies
+phase: MVP
+priority: critical
+estimated_duration: 30min
+status: completed
+
+description: |
+  Initialize the project structure with Vite, install Three.js and required dependencies,
+  and configure the development environment.
+
+acceptance_criteria:
+  - Vite project initialized with ES6+ configuration
+  - Three.js installed (latest stable version)
+  - Simplex/Perlin noise library installed
+  - package.json configured with dev and build scripts
+  - Development server runs successfully
+  - Hot module replacement (HMR) working
+
+tasks:
+  - Initialize Vite project with vanilla JS template
+  - Install three as dependency
+  - Install simplex-noise or equivalent
+  - Configure vite.config.js for optimal dev experience
+  - Create basic npm scripts (dev, build, preview)
+  - Test development server startup
+
+dependencies: []
+
+technical_notes: |
+  - Use Vite's vanilla template (not React/Vue)
+  - Three.js version should be ^0.160.0 or latest
+  - Consider adding vite-plugin-glsl if custom shaders needed later
+
+references:
+  - prd.md#Technical Requirements
+  - memory-bank/techContext.md#Tech Stack
+  - memory-bank/decisions.md#2025-10-25-vite
+
+deliverables:
+  - package.json with dependencies
+  - vite.config.js
+  - Working dev server (npm run dev)

@@ -1,0 +1,49 @@
+id: mvp-04
+title: Particle System Foundation
+phase: MVP
+priority: critical
+estimated_duration: 1.5hr
+status: completed
+
+description: |
+  Create the core particle system architecture with Particle class,
+  ParticleSystem manager, and efficient Three.js rendering using Points
+  or InstancedMesh.
+
+acceptance_criteria:
+  - Particle class with position, velocity, color, size properties
+  - ParticleSystem class managing collection of particles
+  - Efficient rendering using BufferGeometry and Points
+  - Hundreds of particles rendering at 60fps
+  - Basic random initialization (position, velocity)
+  - Particles update and render in main loop
+
+tasks:
+  - Create src/particles/Particle.js class
+  - Create src/particles/ParticleSystem.js manager
+  - Implement BufferGeometry with position, color attributes
+  - Create PointsMaterial with size and vertexColors
+  - Initialize N particles with random positions in viewport bounds
+  - Implement update() method for ParticleSystem
+  - Connect particle system to main render loop
+  - Test with 500-1000 particles for performance
+
+dependencies:
+  - mvp-03
+
+technical_notes: |
+  - Use Float32Array for position/color buffers (efficient)
+  - Store particles as array in ParticleSystem
+  - Update buffer attributes every frame (attribute.needsUpdate = true)
+  - Consider world-space coordinates vs normalized (-1 to 1)
+  - Particle size should be configurable (2-5 pixels default)
+
+references:
+  - memory-bank/systemPatterns.md#Particle System
+  - memory-bank/projectRules.md#Three.js Specific
+  - memory-bank/quick-start.md#Render Loop Structure
+
+deliverables:
+  - src/particles/Particle.js
+  - src/particles/ParticleSystem.js
+  - Visible particle system rendering in browser

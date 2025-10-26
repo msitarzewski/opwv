@@ -1,0 +1,47 @@
+id: xr-01
+title: WebXR Setup and Dependencies
+phase: XR-Test
+priority: critical
+estimated_duration: 45min
+status: pending
+
+description: |
+  Research and install WebXR dependencies, configure Three.js for VR support,
+  and set up basic WebXR device detection and capability checks.
+
+acceptance_criteria:
+  - WebXR Device API polyfill installed (if needed)
+  - Three.js WebXR documentation reviewed
+  - VR device detection working
+  - Browser WebXR support verified
+  - Entry point for VR mode identified
+  - No breaking changes to existing 2D mode
+
+tasks:
+  - Research Three.js WebXRManager API
+  - Install webxr-polyfill if needed for broader browser support
+  - Add VR button/trigger mechanism (URL parameter or button)
+  - Implement WebXR feature detection (navigator.xr)
+  - Test VR availability check on desktop/mobile
+  - Document WebXR browser compatibility
+
+dependencies: []
+
+technical_notes: |
+  - Three.js has built-in WebXRManager (renderer.xr)
+  - Use renderer.xr.enabled = true to activate VR support
+  - WebXR requires HTTPS or localhost
+  - Consider URL parameter (?mode=vr) for VR mode entry
+  - Maintain backward compatibility with existing 2D mode
+  - Chrome/Edge have best WebXR support; Firefox/Safari require polyfill
+
+references:
+  - https://threejs.org/docs/#api/en/renderers/webxr/WebXRManager
+  - https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API
+  - memory-bank/systemPatterns.md#Architecture Overview
+
+deliverables:
+  - Updated package.json with webxr-polyfill (optional)
+  - VR mode detection function
+  - VR entry mechanism (URL param or button)
+  - Documentation of WebXR setup

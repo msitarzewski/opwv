@@ -1,0 +1,61 @@
+id: mvp-10
+title: Testing and Final Optimization
+phase: MVP
+priority: high
+estimated_duration: 2hr
+status: completed
+
+description: |
+  Test the complete system across devices, optimize performance, fix bugs,
+  and ensure all acceptance criteria are met for MVP release.
+
+acceptance_criteria:
+  - Page loads and animation starts within 1 second
+  - 60fps sustained on modern desktop browsers
+  - Graceful performance on mobile devices
+  - Every refresh produces different, pleasing animation
+  - Mouse and touch interaction working smoothly
+  - No console errors or warnings
+  - No memory leaks (verify with Chrome DevTools)
+  - All PRD acceptance criteria verified
+
+tasks:
+  - Test on desktop browsers (Chrome, Safari, Firefox, Edge)
+  - Test on mobile devices (iOS Safari, Android Chrome)
+  - Verify load time (< 1 second on broadband)
+  - Test with various seeds for visual quality
+  - Check for memory leaks (run for 5+ minutes, monitor memory)
+  - Optimize bundle size (verify Vite production build)
+  - Profile performance (Chrome DevTools Performance tab)
+  - Fix any identified bugs or performance issues
+  - Verify all PRD acceptance criteria
+  - Clean up console.log statements (keep seed logging only)
+
+dependencies:
+  - mvp-01
+  - mvp-02
+  - mvp-03
+  - mvp-04
+  - mvp-05
+  - mvp-06
+  - mvp-07
+  - mvp-08
+  - mvp-09
+
+technical_notes: |
+  - Use Chrome DevTools Performance tab for profiling
+  - Check Memory tab for leaks (heap snapshots)
+  - Verify Three.js object disposal (no orphaned geometries/materials)
+  - Test with throttled CPU/network in DevTools
+  - Verify mobile touch interactions (not just mouse)
+
+references:
+  - prd.md#Acceptance Criteria
+  - memory-bank/projectRules.md#Performance Rules
+  - memory-bank/techContext.md#Performance Targets
+
+deliverables:
+  - Fully tested MVP
+  - Performance verification across devices
+  - Bug-free, optimized experience
+  - Production build ready for deployment

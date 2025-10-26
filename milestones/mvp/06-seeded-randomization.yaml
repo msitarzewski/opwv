@@ -1,0 +1,46 @@
+id: mvp-06
+title: Seeded Randomization System
+phase: MVP
+priority: high
+estimated_duration: 1hr
+status: completed
+
+description: |
+  Implement seeded random number generation to ensure reproducible visuals
+  and enable future seed sharing functionality.
+
+acceptance_criteria:
+  - Seeded RNG utility class implemented
+  - Seed generated on load (timestamp or random)
+  - All randomness uses seeded RNG (particle count, colors, motion params)
+  - Same seed produces identical visual (reproducible)
+  - Seed logged to console for debugging
+  - Optional: URL parameter support (?seed=12345)
+
+tasks:
+  - Create src/utils/random.js with SeededRandom class
+  - Implement seedable PRNG (e.g., mulberry32 or similar)
+  - Add random(), randomInt(), randomFloat() methods
+  - Generate seed on page load (Date.now() or crypto.random)
+  - Replace all Math.random() calls with seeded RNG
+  - Log current seed to console
+  - Optional: Parse seed from URL params
+  - Test reproducibility (same seed = same output)
+
+dependencies:
+  - mvp-04
+
+technical_notes: |
+  - Use simple, fast PRNG algorithm (mulberry32, sfc32, xoshiro)
+  - Store seed as number (32-bit or 64-bit)
+  - URL format: ?seed=12345 (base 10 integer)
+  - Consider adding seed to page title or small UI element (Phase 2)
+
+references:
+  - memory-bank/decisions.md#2025-10-25-seeded-randomization
+  - memory-bank/quick-start.md#Seeded Random Usage
+
+deliverables:
+  - src/utils/random.js
+  - Seed logging in console
+  - All randomness using seeded RNG

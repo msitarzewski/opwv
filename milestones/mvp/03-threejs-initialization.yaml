@@ -1,0 +1,47 @@
+id: mvp-03
+title: Three.js Renderer Initialization
+phase: MVP
+priority: critical
+estimated_duration: 45min
+status: completed
+
+description: |
+  Initialize Three.js WebGLRenderer, create scene, camera, and implement
+  basic render loop with proper resizing and cleanup.
+
+acceptance_criteria:
+  - WebGLRenderer initialized with proper settings
+  - Scene and camera (PerspectiveCamera or OrthographicCamera) created
+  - Render loop using requestAnimationFrame
+  - Window resize handler updates camera and renderer
+  - Proper cleanup on page unload
+  - Delta time calculated for frame-rate independence
+
+tasks:
+  - Create src/main.js entry point
+  - Initialize WebGLRenderer with antialias and alpha settings
+  - Create Scene and Camera (determine perspective vs ortho)
+  - Set up requestAnimationFrame render loop
+  - Add window resize event listener
+  - Implement resize handler (update camera aspect, renderer size)
+  - Add Clock for delta time
+  - Test with simple placeholder object (e.g., box or sphere)
+
+dependencies:
+  - mvp-01
+  - mvp-02
+
+technical_notes: |
+  - Consider OrthographicCamera for 2D-style particle view
+  - Set renderer.setPixelRatio() but clamp to max 2 for performance
+  - Use renderer.setSize(window.innerWidth, window.innerHeight)
+  - Store camera aspect ratio for resize calculations
+
+references:
+  - memory-bank/systemPatterns.md#Renderer
+  - memory-bank/systemPatterns.md#Animation Loop
+  - memory-bank/projectRules.md#Three.js Specific
+
+deliverables:
+  - src/main.js with renderer, scene, camera, render loop
+  - Visible placeholder object to verify rendering works

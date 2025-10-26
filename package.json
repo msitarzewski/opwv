@@ -1,0 +1,40 @@
+{
+  "name": "opwv",
+  "version": "1.0.0",
+  "description": "Organic Particle WebGL Visualizer - A mesmerizing generative art experience using Three.js",
+  "type": "module",
+  "author": {
+    "name": "msitarzewski",
+    "email": "msitarzewski@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/msitarzewski/opwv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/msitarzewski/opwv/issues"
+  },
+  "homepage": "https://github.com/msitarzewski/opwv#readme",
+  "license": "MIT",
+  "keywords": [
+    "webgl",
+    "three.js",
+    "generative-art",
+    "particle-system",
+    "visualization",
+    "canvas",
+    "animation"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "three": "^0.169.0",
+    "simplex-noise": "^4.0.3"
+  }
+}

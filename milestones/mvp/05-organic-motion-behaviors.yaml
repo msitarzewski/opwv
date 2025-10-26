@@ -1,0 +1,51 @@
+id: mvp-05
+title: Organic Motion Behaviors
+phase: MVP
+priority: critical
+estimated_duration: 2hr
+status: completed
+
+description: |
+  Implement flocking behaviors (cohesion, alignment, separation) and
+  noise-driven motion to create organic, natural particle movement.
+
+acceptance_criteria:
+  - Flocking behaviors implemented (cohesion, alignment, separation)
+  - Simplex/Perlin noise applied for smooth, organic drift
+  - Particles exhibit smooth, natural motion (not jittery)
+  - Max speed limit enforced to prevent chaos
+  - Configurable behavior weights (noise vs flocking)
+  - Motion feels "calm and dreamy" per PRD requirements
+
+tasks:
+  - Create src/particles/behaviors.js module
+  - Implement cohesion (steer toward average position of neighbors)
+  - Implement alignment (match average velocity of neighbors)
+  - Implement separation (avoid crowding neighbors)
+  - Integrate simplex-noise library for organic drift
+  - Add applyFlocking() method to ParticleSystem
+  - Add applyNoise() method to ParticleSystem
+  - Implement velocity clamping (max speed)
+  - Add boundary handling (wrap-around or soft bounce)
+  - Tune behavior weights for pleasant motion
+
+dependencies:
+  - mvp-04
+
+technical_notes: |
+  - Use spatial partitioning or distance checks for neighbor detection
+  - Cohesion/alignment/separation should have configurable radii
+  - Noise field should be 3D (x, y, time) for smooth animation
+  - Consider noise scale and octaves for visual quality
+  - All forces should be additive (accumulate then apply)
+
+references:
+  - prd.md#Animation Behavior
+  - memory-bank/systemPatterns.md#Organic Motion
+  - memory-bank/projectRules.md#Animation Rules
+  - Craig Reynolds Boids Algorithm (external reference)
+
+deliverables:
+  - src/particles/behaviors.js
+  - src/utils/noise.js (noise helpers)
+  - Particles exhibiting organic, natural motion

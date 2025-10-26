@@ -1,0 +1,49 @@
+id: mvp-09
+title: Performance Monitoring and Adaptive Quality
+phase: MVP
+priority: high
+estimated_duration: 1.5hr
+status: completed
+
+description: |
+  Implement FPS monitoring and adaptive quality system to maintain 60fps
+  by dynamically adjusting particle count based on performance.
+
+acceptance_criteria:
+  - FPS monitoring every 60 frames
+  - Automatic particle count reduction if FPS < 50
+  - Device pixel ratio clamped to max 2 for high-DPI screens
+  - No user intervention required (fully automatic)
+  - Performance adjustments feel smooth (not sudden drops)
+  - Console logging of performance adjustments
+
+tasks:
+  - Create src/utils/performance.js module
+  - Implement PerformanceMonitor class with FPS tracking
+  - Add FPS calculation using requestAnimationFrame timestamps
+  - Check average FPS every 60 frames
+  - Reduce particle count by 10-20% if FPS < 50
+  - Clamp renderer.setPixelRatio() to max 2
+  - Log performance adjustments to console
+  - Optional: Add Stats.js for visual FPS counter (dev mode)
+  - Test with high particle counts to trigger adaptation
+
+dependencies:
+  - mvp-04
+
+technical_notes: |
+  - FPS = 1000 / deltaTime (in ms)
+  - Use rolling average over 60 frames for stability
+  - Particle reduction should be gradual (10-20% per adjustment)
+  - Min particle count threshold (e.g., 100 particles minimum)
+  - Consider adaptive update rates (skip frames) as alternative
+
+references:
+  - prd.md#Performance Targets
+  - memory-bank/decisions.md#2025-10-25-adaptive-performance
+  - memory-bank/quick-start.md#Adaptive Quality
+
+deliverables:
+  - src/utils/performance.js
+  - Performance monitoring integrated in render loop
+  - Automatic quality adaptation working

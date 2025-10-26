@@ -1,0 +1,50 @@
+id: xr-05
+title: VR Rendering Loop
+phase: XR-Test
+priority: high
+estimated_duration: 1hr
+status: pending
+
+description: |
+  Adapt the animation loop to support WebXR stereo rendering, handle VR poses,
+  and ensure smooth performance in immersive mode.
+
+acceptance_criteria:
+  - Animation loop uses renderer.setAnimationLoop() for VR
+  - VR pose tracking working (head movement updates view)
+  - Stereo rendering active (left/right eye views)
+  - Frame rate stable in VR (72fps+ target for VR devices)
+  - Particle updates synchronized with VR frame timing
+  - Graceful fallback to standard loop when exiting VR
+
+tasks:
+  - Replace requestAnimationFrame with renderer.setAnimationLoop()
+  - Ensure delta time calculation works in VR loop
+  - Verify particle system updates on VR frames
+  - Test stereo rendering (both eyes render correctly)
+  - Profile VR performance (target 72fps minimum)
+  - Implement loop switching for 2D ↔ VR transitions
+
+dependencies:
+  - xr-03
+  - xr-04
+  - mvp-03
+
+technical_notes: |
+  - renderer.setAnimationLoop(callback) handles both VR and non-VR
+  - WebXRManager automatically handles stereo rendering
+  - VR frame rate targets: 72fps (Quest), 90fps (Rift/Vive), 120fps (Index)
+  - Use XRFrame.getViewerPose() for head tracking (automatic in Three.js)
+  - Delta time: use timestamp from loop callback
+  - Performance critical: O(n²) flocking may need optimization for VR
+
+references:
+  - https://threejs.org/docs/#api/en/renderers/WebGLRenderer.setAnimationLoop
+  - memory-bank/systemPatterns.md#Animation Loop
+  - memory-bank/systemPatterns.md#Performance Patterns
+
+deliverables:
+  - Updated animation loop using setAnimationLoop()
+  - VR-compatible delta time handling
+  - Verified stereo rendering
+  - Performance profiling results

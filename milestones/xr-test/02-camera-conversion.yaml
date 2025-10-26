@@ -1,0 +1,48 @@
+id: xr-02
+title: Camera System Conversion
+phase: XR-Test
+priority: critical
+estimated_duration: 1hr
+status: pending
+
+description: |
+  Convert the existing OrthographicCamera to PerspectiveCamera for proper 360° viewing,
+  implement camera positioning at center of particle space, and ensure proper FOV for VR.
+
+acceptance_criteria:
+  - PerspectiveCamera replaces OrthographicCamera for VR mode
+  - Camera positioned at origin (0, 0, 0) - center of particle space
+  - FOV set to appropriate value for VR (90-110°)
+  - Near/far clipping planes configured for particle visibility
+  - Camera aspect ratio adapts to window size
+  - Existing 2D mode unaffected (dual camera setup)
+
+tasks:
+  - Create PerspectiveCamera with VR-appropriate FOV (~90-100°)
+  - Position camera at (0, 0, 0) - center of space
+  - Configure near plane (e.g., 0.1) and far plane (e.g., 1000)
+  - Implement camera selection logic (2D vs VR mode)
+  - Test camera frustum contains particle space
+  - Verify particles visible in all directions
+
+dependencies:
+  - xr-01
+
+technical_notes: |
+  - PerspectiveCamera FOV typically 75-90° for desktop, 90-110° for VR
+  - Camera at origin allows 360° particle viewing
+  - Near plane should be close (0.1) to see nearby particles
+  - Far plane should encompass entire particle space
+  - Consider separate camera instances for 2D/VR modes
+  - VR cameras are stereo (handled by WebXRManager automatically)
+
+references:
+  - https://threejs.org/docs/#api/en/cameras/PerspectiveCamera
+  - memory-bank/systemPatterns.md#Renderer
+  - milestones/mvp/03-threejs-initialization.yaml
+
+deliverables:
+  - PerspectiveCamera implementation for VR mode
+  - Camera positioning logic
+  - Mode-switching mechanism (2D ↔ VR camera)
+  - Updated camera resize handler
