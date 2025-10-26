@@ -22,11 +22,21 @@
 - ✅ Comprehensive testing documentation (TESTING.md)
 - ✅ Zero build errors/warnings
 
+**Post-MVP**:
+- ✅ Git repository initialized and configured
+- ✅ GitHub repository created (https://github.com/msitarzewski/opwv)
+- ✅ Version 1.0.0 published (initial release)
+- ✅ Comprehensive README.md created
+- ✅ MIT License applied
+- ✅ Project metadata updated (package.json)
+
 **Pending**:
 - ⏳ Manual testing verification (cross-browser, mobile, profiling)
-- ⏳ Production deployment (after testing sign-off)
+- ⏳ Production deployment via GitHub Pages (after testing sign-off)
 
 ## Completed Milestones
+
+### MVP Phase (Complete)
 - ✅ **MVP-01**: Project Setup and Dependencies (2025-10-25)
   - Vite + Three.js v0.169.0 + simplex-noise v4.0.3
   - Development environment configured
@@ -74,6 +84,16 @@
   - Automated QA: All code quality standards met
   - Production ready: Pending manual testing sign-off
 
+### Post-MVP Infrastructure
+- ✅ **Git/GitHub Setup** (2025-10-26)
+  - Git repository initialized with user configuration
+  - GitHub CLI installed (gh v2.82.1) and authenticated
+  - Created README.md (249 lines), LICENSE (MIT), .gitignore
+  - Updated package.json with author, repository, license (v1.0.0)
+  - Initial commit: 59 files, 10,835 insertions (commit 6c0c208)
+  - Published to GitHub: https://github.com/msitarzewski/opwv (public)
+  - Repository now version-controlled and publicly accessible
+
 ## In Progress
 - ⏳ **Manual Testing Verification** (TESTING.md)
   - Cross-browser testing (Chrome, Safari, Firefox, Edge)
@@ -88,7 +108,10 @@
   - Estimated: ~8 hours (~1-1.5 days)
   - Goal: Proof of concept for VR viewing with camera at center of particle space
   - No interaction in test phase
-- **Production Deployment**: Deploy MVP to static hosting (Netlify, Vercel, GitHub Pages)
+- **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
+  - Enable GitHub Pages in repository settings
+  - Deploy dist/ folder to gh-pages branch
+  - Configure custom domain (optional)
 - **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)
 
 ## Technical Achievements

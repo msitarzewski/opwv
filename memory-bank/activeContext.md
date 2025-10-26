@@ -60,8 +60,10 @@ None (proceeding with PRD as specified)
 - 2025-10-26: MVP-10 completed (Testing and Final Optimization)
 - 2025-10-26: **MVP PHASE 100% COMPLETE** - Ready for production deployment
 - 2025-10-26: XR Test milestone created (6 tasks for WebXR 360° immersive mode)
+- 2025-10-26: Git repository initialized and published to GitHub
+- 2025-10-26: Version 1.0.0 released (https://github.com/msitarzewski/opwv)
 
 ## Upcoming Milestones
 - **XR Test (NEW)**: WebXR 360° immersive viewing mode (6 tasks, ~8 hours)
-- **Production Deployment**: Deploy MVP to static hosting (Netlify, Vercel, GitHub Pages)
+- **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
 - **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)
