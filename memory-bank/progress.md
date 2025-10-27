@@ -105,10 +105,21 @@
   - Bundle impact: +1.38 kB (+0.3% overhead)
   - Zero breaking changes to 2D mode (backward compatible)
 
+- ✅ **XR-02: Camera System Conversion** (2025-10-26)
+  - Implemented dual camera system (camera2D + camera3D)
+  - Created PerspectiveCamera for VR mode (FOV=100°, near=0.1, far=1000)
+  - Positioned camera3D at origin (0, 0, 0) for 360° immersive viewing
+  - Mode-based camera selection via vrModeRequested flag
+  - Raycaster-based mouse/touch interaction for PerspectiveCamera
+  - Updated resize handler to support both camera types
+  - OrthographicCamera coordinate conversion preserved for 2D mode
+  - Bundle impact: +1.63 kB (+0.3% overhead)
+  - Zero breaking changes to 2D mode (backward compatible)
+
 ## In Progress
-- ⏳ **XR Test Milestone** (1/6 tasks complete)
+- ⏳ **XR Test Milestone** (2/6 tasks complete)
   - ✅ XR-01: WebXR Setup and Dependencies
-  - ⏳ XR-02: Camera Conversion (OrthographicCamera → PerspectiveCamera)
+  - ✅ XR-02: Camera Conversion (OrthographicCamera → PerspectiveCamera)
   - ⏳ XR-03: WebXR Session Management
   - ⏳ XR-04: Spherical Particle Space
   - ⏳ XR-05: VR Render Loop
@@ -116,8 +127,8 @@
 
 ## Upcoming Milestones
 - **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode
-  - 6 tasks total: 1 complete (XR-01), 5 remaining
-  - Estimated remaining: ~7 hours (~1 day)
+  - 6 tasks total: 2 complete (XR-01, XR-02), 4 remaining
+  - Estimated remaining: ~6 hours (~1 day)
   - Goal: Proof of concept for VR viewing with camera at center of particle space
   - No interaction in test phase
 - **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)

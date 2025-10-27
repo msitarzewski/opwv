@@ -36,6 +36,11 @@ const vrButton = document.querySelector('#vr-button')
 // Mouse/touch position in world coordinates (null when no interaction)
 let mousePosition = null
 
+// Raycaster for PerspectiveCamera mouse interaction
+const raycaster = new THREE.Raycaster()
+// Plane at z=0 for raycasting (particles are in XY plane)
+const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+
 // Initialize Three.js renderer
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -56,10 +61,12 @@ if (webxrSupported) {
 // Create scene
 const scene = new THREE.Scene()
 
-// Create orthographic camera (2D-style view for particles)
+// Create cameras for 2D and VR modes
 const aspect = window.innerWidth / window.innerHeight
 const frustumSize = 10
-const camera = new THREE.OrthographicCamera(
+
+// OrthographicCamera for 2D mode (existing MVP behavior)
+const camera2D = new THREE.OrthographicCamera(
   (frustumSize * aspect) / -2,  // left
   (frustumSize * aspect) / 2,   // right
   frustumSize / 2,               // top
@@ -67,15 +74,27 @@ const camera = new THREE.OrthographicCamera(
   0.1,                           // near
   100                            // far
 )
-camera.position.z = 5
+camera2D.position.z = 5
+
+// PerspectiveCamera for VR mode (360° viewing from center)
+const camera3D = new THREE.PerspectiveCamera(
+  100,                           // fov (VR-appropriate wide angle)
+  aspect,                        // aspect ratio
+  0.1,                           // near (see close particles)
+  1000                           // far (encompass entire particle space)
+)
+camera3D.position.set(0, 0, 0)   // Center of particle space for 360° viewing
+
+// Select camera based on VR mode
+const camera = vrModeRequested ? camera3D : camera2D
 
 // Initialize particle system
-// Calculate viewport bounds from camera frustum
+// Calculate viewport bounds from 2D camera frustum (particles remain in 2D plane until XR-04)
 const bounds = {
-  minX: camera.left,
-  maxX: camera.right,
-  minY: camera.bottom,
-  maxY: camera.top
+  minX: camera2D.left,
+  maxX: camera2D.right,
+  minY: camera2D.bottom,
+  maxY: camera2D.top
 }
 
 const particleSystem = new ParticleSystem(500, bounds, rng)
@@ -116,12 +135,19 @@ function animate(timestamp) {
 function onWindowResize() {
   const aspect = window.innerWidth / window.innerHeight
 
-  // Update camera frustum
-  camera.left = (frustumSize * aspect) / -2
-  camera.right = (frustumSize * aspect) / 2
-  camera.top = frustumSize / 2
-  camera.bottom = frustumSize / -2
-  camera.updateProjectionMatrix()
+  // Update camera based on type
+  if (camera === camera2D) {
+    // OrthographicCamera: Update frustum
+    camera2D.left = (frustumSize * aspect) / -2
+    camera2D.right = (frustumSize * aspect) / 2
+    camera2D.top = frustumSize / 2
+    camera2D.bottom = frustumSize / -2
+    camera2D.updateProjectionMatrix()
+  } else {
+    // PerspectiveCamera: Update aspect ratio
+    camera3D.aspect = aspect
+    camera3D.updateProjectionMatrix()
+  }
 
   // Update renderer size
   renderer.setSize(window.innerWidth, window.innerHeight)
@@ -131,15 +157,25 @@ window.addEventListener('resize', onWindowResize)
 
 // Mouse interaction handler
 function onMouseMove(event) {
-  // Normalize mouse coordinates to [-1, 1]
+  // Normalize mouse coordinates to [-1, 1] (NDC)
   const normalizedX = (event.clientX / window.innerWidth) * 2 - 1
   const normalizedY = -(event.clientY / window.innerHeight) * 2 + 1
 
-  // Convert to world space using camera frustum
-  const worldX = normalizedX * (camera.right - camera.left) / 2
-  const worldY = normalizedY * (camera.top - camera.bottom) / 2
+  if (camera === camera2D) {
+    // OrthographicCamera: Convert NDC to world space using frustum
+    const worldX = normalizedX * (camera2D.right - camera2D.left) / 2
+    const worldY = normalizedY * (camera2D.top - camera2D.bottom) / 2
+    mousePosition = { x: worldX, y: worldY }
+  } else {
+    // PerspectiveCamera: Use raycaster to find intersection with XY plane
+    raycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera3D)
+    const intersection = new THREE.Vector3()
+    raycaster.ray.intersectPlane(interactionPlane, intersection)
 
-  mousePosition = { x: worldX, y: worldY }
+    if (intersection) {
+      mousePosition = { x: intersection.x, y: intersection.y }
+    }
+  }
 }
 
 // Touch interaction handler
@@ -150,15 +186,25 @@ function onTouchMove(event) {
   if (event.touches.length > 0) {
     const touch = event.touches[0]
 
-    // Normalize touch coordinates to [-1, 1]
+    // Normalize touch coordinates to [-1, 1] (NDC)
     const normalizedX = (touch.clientX / window.innerWidth) * 2 - 1
     const normalizedY = -(touch.clientY / window.innerHeight) * 2 + 1
 
-    // Convert to world space using camera frustum
-    const worldX = normalizedX * (camera.right - camera.left) / 2
-    const worldY = normalizedY * (camera.top - camera.bottom) / 2
+    if (camera === camera2D) {
+      // OrthographicCamera: Convert NDC to world space using frustum
+      const worldX = normalizedX * (camera2D.right - camera2D.left) / 2
+      const worldY = normalizedY * (camera2D.top - camera2D.bottom) / 2
+      mousePosition = { x: worldX, y: worldY }
+    } else {
+      // PerspectiveCamera: Use raycaster to find intersection with XY plane
+      raycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera3D)
+      const intersection = new THREE.Vector3()
+      raycaster.ray.intersectPlane(interactionPlane, intersection)
 
-    mousePosition = { x: worldX, y: worldY }
+      if (intersection) {
+        mousePosition = { x: intersection.x, y: intersection.y }
+      }
+    }
   }
 }
 

@@ -63,8 +63,9 @@ None (proceeding with PRD as specified)
 - 2025-10-26: Git repository initialized and published to GitHub
 - 2025-10-26: Version 1.0.0 released (https://github.com/msitarzewski/opwv)
 - 2025-10-26: XR-01 completed (WebXR Setup and Dependencies - detection, VR button, URL parameter)
+- 2025-10-26: XR-02 completed (Camera System Conversion - dual camera, PerspectiveCamera, raycaster)
 
 ## Upcoming Milestones
-- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode (1/6 tasks complete, ~7 hours remaining)
+- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode (2/6 tasks complete, ~6 hours remaining)
 - **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
 - **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)
