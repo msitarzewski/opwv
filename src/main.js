@@ -5,11 +5,22 @@ import * as THREE from 'three'
 import { ParticleSystem } from './particles/ParticleSystem.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
+import { getVRModeFromURL, isWebXRSupported, isVRSessionSupported, getBrowserInfo } from './utils/webxr.js'
 
 // Generate or parse seed for reproducible randomization
 const seed = getSeedFromURL() || generateSeed()
 const rng = new SeededRandom(seed)
 console.log('Seed:', seed, '(use ?seed=' + seed + ' to reproduce this visual)')
+
+// Check for VR mode request
+const vrModeRequested = getVRModeFromURL()
+const webxrSupported = isWebXRSupported()
+const browserInfo = getBrowserInfo()
+
+console.log('WebXR supported:', webxrSupported, '(' + browserInfo.browser + ')')
+if (vrModeRequested && !webxrSupported) {
+  console.warn('VR mode requested but WebXR not supported in this browser')
+}
 
 // Get canvas element
 const canvas = document.querySelector('#canvas')
@@ -18,6 +29,9 @@ if (!canvas) {
   console.error('Canvas element not found')
   throw new Error('Canvas element not found')
 }
+
+// Get VR button element
+const vrButton = document.querySelector('#vr-button')
 
 // Mouse/touch position in world coordinates (null when no interaction)
 let mousePosition = null
@@ -32,6 +46,12 @@ const renderer = new THREE.WebGLRenderer({
 // Clamp pixel ratio to max 2 for performance
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
+
+// Enable WebXR support if available
+if (webxrSupported) {
+  renderer.xr.enabled = true
+  console.log('WebXR enabled on renderer')
+}
 
 // Create scene
 const scene = new THREE.Scene()
@@ -160,6 +180,43 @@ function cleanup() {
 }
 
 window.addEventListener('beforeunload', cleanup)
+
+// VR button setup
+if (vrButton && webxrSupported) {
+  // Check VR session support asynchronously
+  isVRSessionSupported().then(supported => {
+    if (supported) {
+      // Show button if VR sessions are supported
+      vrButton.style.display = 'block'
+      console.log('VR sessions supported - button visible')
+
+      // Handle VR button click
+      const onVRButtonClick = () => {
+        if (!vrModeRequested) {
+          // Redirect to VR mode via URL parameter
+          const url = new URL(window.location)
+          url.searchParams.set('mode', 'vr')
+          window.location.href = url.toString()
+        } else {
+          // Already in VR mode - show message for future VR session initiation
+          console.log('VR mode active - VR session will be initiated in XR-03')
+          alert('VR mode active. Full VR session support coming in XR-03.')
+        }
+      }
+
+      vrButton.addEventListener('click', onVRButtonClick)
+
+      // Add cleanup for VR button
+      const originalCleanup = cleanup
+      cleanup = function() {
+        vrButton.removeEventListener('click', onVRButtonClick)
+        originalCleanup()
+      }
+    } else {
+      console.log('VR sessions not supported - button hidden')
+    }
+  })
+}
 
 // Start animation loop
 animate(performance.now())

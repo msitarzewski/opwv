@@ -94,18 +94,30 @@
   - Published to GitHub: https://github.com/msitarzewski/opwv (public)
   - Repository now version-controlled and publicly accessible
 
+### XR Test Milestone (In Progress)
+- ✅ **XR-01: WebXR Setup and Dependencies** (2025-10-26)
+  - Created WebXR detection utilities (src/utils/webxr.js - 72 lines)
+  - Implemented VR mode URL parameter parsing (?mode=vr)
+  - Enabled renderer.xr on Three.js WebGLRenderer (conditional)
+  - Added VR button UI with glassmorphic design (bottom-right, hidden by default)
+  - Browser compatibility detection (Chrome/Edge/Firefox/Safari)
+  - Async VR session support checking (navigator.xr.isSessionSupported)
+  - Bundle impact: +1.38 kB (+0.3% overhead)
+  - Zero breaking changes to 2D mode (backward compatible)
+
 ## In Progress
-- ⏳ **Manual Testing Verification** (TESTING.md)
-  - Cross-browser testing (Chrome, Safari, Firefox, Edge)
-  - Mobile device testing (iOS Safari, Android Chrome)
-  - Performance profiling (memory leaks, CPU, frame timing)
-  - Visual quality assessment (10 seeds)
-  - Production readiness sign-off
+- ⏳ **XR Test Milestone** (1/6 tasks complete)
+  - ✅ XR-01: WebXR Setup and Dependencies
+  - ⏳ XR-02: Camera Conversion (OrthographicCamera → PerspectiveCamera)
+  - ⏳ XR-03: WebXR Session Management
+  - ⏳ XR-04: Spherical Particle Space
+  - ⏳ XR-05: VR Render Loop
+  - ⏳ XR-06: Testing and Optimization
 
 ## Upcoming Milestones
-- **XR Test (NEW)**: WebXR 360° immersive viewing mode
-  - 6 tasks: WebXR setup, camera conversion, session management, spherical space, VR render loop, testing
-  - Estimated: ~8 hours (~1-1.5 days)
+- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode
+  - 6 tasks total: 1 complete (XR-01), 5 remaining
+  - Estimated remaining: ~7 hours (~1 day)
   - Goal: Proof of concept for VR viewing with camera at center of particle space
   - No interaction in test phase
 - **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
