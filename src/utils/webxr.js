@@ -71,3 +71,57 @@ export function getBrowserInfo() {
     webxrSupported: isWebXRSupported()
   }
 }
+
+/**
+ * Request immersive VR session
+ * @param {THREE.WebGLRenderer} renderer - Three.js renderer with xr enabled
+ * @returns {Promise<XRSession|null>} VR session or null on failure
+ * @example
+ * const session = await requestVRSession(renderer)
+ * if (session) {
+ *   console.log('VR session active')
+ * }
+ */
+export async function requestVRSession(renderer) {
+  if (!isWebXRSupported()) {
+    console.error('WebXR not supported in this browser')
+    return null
+  }
+
+  try {
+    // Request immersive VR session with optional features
+    const session = await navigator.xr.requestSession('immersive-vr', {
+      optionalFeatures: ['local-floor', 'bounded-floor']
+    })
+
+    // Connect session to Three.js WebXRManager
+    await renderer.xr.setSession(session)
+    console.log('VR session started successfully')
+    return session
+  } catch (error) {
+    console.error('Failed to start VR session:', error.message)
+    return null
+  }
+}
+
+/**
+ * End VR session gracefully
+ * @param {XRSession} session - Active VR session to end
+ * @returns {Promise<void>}
+ * @example
+ * await endVRSession(xrSession)
+ * console.log('VR session ended')
+ */
+export async function endVRSession(session) {
+  if (!session) {
+    console.warn('No active VR session to end')
+    return
+  }
+
+  try {
+    await session.end()
+    console.log('VR session ended gracefully')
+  } catch (error) {
+    console.warn('Error ending VR session:', error.message)
+  }
+}

@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { ParticleSystem } from './particles/ParticleSystem.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
-import { getVRModeFromURL, isWebXRSupported, isVRSessionSupported, getBrowserInfo } from './utils/webxr.js'
+import { getVRModeFromURL, isWebXRSupported, isVRSessionSupported, getBrowserInfo, requestVRSession, endVRSession } from './utils/webxr.js'
 
 // Generate or parse seed for reproducible randomization
 const seed = getSeedFromURL() || generateSeed()
@@ -36,6 +36,9 @@ const vrButton = document.querySelector('#vr-button')
 // Mouse/touch position in world coordinates (null when no interaction)
 let mousePosition = null
 
+// WebXR session state
+let xrSession = null
+
 // Raycaster for PerspectiveCamera mouse interaction
 const raycaster = new THREE.Raycaster()
 // Plane at z=0 for raycasting (particles are in XY plane)
@@ -55,7 +58,8 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 // Enable WebXR support if available
 if (webxrSupported) {
   renderer.xr.enabled = true
-  console.log('WebXR enabled on renderer')
+  renderer.xr.setReferenceSpaceType('local') // Stationary viewer at origin
+  console.log('WebXR enabled on renderer with local reference space')
 }
 
 // Create scene
@@ -106,10 +110,8 @@ const clock = new THREE.Clock()
 // Performance monitoring for adaptive quality
 const performanceMonitor = new PerformanceMonitor()
 
-// Render loop
+// Render loop (VR-compatible using renderer.setAnimationLoop)
 function animate(timestamp) {
-  requestAnimationFrame(animate)
-
   const delta = clock.getDelta()
 
   // Record frame for performance monitoring
@@ -220,6 +222,12 @@ function cleanup() {
   window.removeEventListener('touchstart', onTouchMove)
   window.removeEventListener('touchmove', onTouchMove)
 
+  // End VR session if active
+  if (xrSession) {
+    endVRSession(xrSession)
+    xrSession = null
+  }
+
   // Dispose Three.js resources
   particleSystem.dispose()
   renderer.dispose()
@@ -237,16 +245,31 @@ if (vrButton && webxrSupported) {
       console.log('VR sessions supported - button visible')
 
       // Handle VR button click
-      const onVRButtonClick = () => {
-        if (!vrModeRequested) {
-          // Redirect to VR mode via URL parameter
-          const url = new URL(window.location)
-          url.searchParams.set('mode', 'vr')
-          window.location.href = url.toString()
+      const onVRButtonClick = async () => {
+        if (!xrSession) {
+          // Request VR session
+          console.log('Requesting VR session...')
+          const session = await requestVRSession(renderer)
+
+          if (session) {
+            xrSession = session
+            vrButton.textContent = 'Exit VR'
+            console.log('VR session active')
+
+            // Handle session end (user exits or system ends session)
+            session.addEventListener('end', () => {
+              xrSession = null
+              vrButton.textContent = 'Enter VR'
+              console.log('VR session ended by user or system')
+            })
+          } else {
+            console.error('Failed to start VR session')
+            alert('Unable to start VR session. Make sure a VR headset is connected.')
+          }
         } else {
-          // Already in VR mode - show message for future VR session initiation
-          console.log('VR mode active - VR session will be initiated in XR-03')
-          alert('VR mode active. Full VR session support coming in XR-03.')
+          // End VR session
+          console.log('Ending VR session...')
+          await endVRSession(xrSession)
         }
       }
 
@@ -264,5 +287,5 @@ if (vrButton && webxrSupported) {
   })
 }
 
-// Start animation loop
-animate(performance.now())
+// Start animation loop (VR-compatible via renderer.setAnimationLoop)
+renderer.setAnimationLoop(animate)
