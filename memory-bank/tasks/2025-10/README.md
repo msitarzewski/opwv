@@ -168,9 +168,22 @@ This month focuses on MVP development for the Organic Particle WebGL Visualizer 
 - Status: ✅ Complete
 - See: [251027_xr-03-webxr-session.md](./251027_xr-03-webxr-session.md)
 
+### 2025-10-28: 360° Spherical Particle Space (XR-04)
+- Adapted particle system from 2D planar to 3D spherical space
+- Implemented spherical initialization using (r, θ, φ) coordinates
+- Added 3D noise field support with get3D() method
+- Implemented spherical boundary wrapping (opposite-side teleport)
+- VR mode: 1000 particles distributed in spherical shell (radius 5-20 units)
+- 2D mode: 500 particles in planar space (backward compatible)
+- Mode detection via bounds properties (no explicit flags)
+- Zero breaking changes to 2D mode or existing behaviors
+- Bundle: +5.28 kB (+1.1% overhead)
+- Status: ✅ Complete (manual VR testing recommended)
+- See: [281028_xr-04-spherical-particle-space.md](./281028_xr-04-spherical-particle-space.md)
+
 ## Tasks In Progress
 
-None - MVP Development 100% Complete, XR Test XR-01, XR-02, XR-03 Complete
+None - MVP Development 100% Complete, XR Test XR-01, XR-02, XR-03, XR-04 Complete
 
 ## Tasks Completed (Summary)
 
@@ -189,10 +202,11 @@ None - MVP Development 100% Complete, XR Test XR-01, XR-02, XR-03 Complete
 ### Post-MVP Infrastructure
 - ✅ Git and GitHub repository setup (version control + public release)
 
-### XR Test Milestone (In Progress - 3/6 Tasks Complete)
+### XR Test Milestone (In Progress - 4/6 Tasks Complete)
 - ✅ XR-01: WebXR Setup and Dependencies (WebXR detection, VR button, URL parameter)
 - ✅ XR-02: Camera System Conversion (Dual camera, PerspectiveCamera, raycaster interaction)
 - ✅ XR-03: WebXR Session Management (VR sessions, setAnimationLoop, reference space)
+- ✅ XR-04: 360° Spherical Particle Space (3D spherical distribution, 1000 particles, radius 5-20)
 
 ## Tasks Upcoming
 

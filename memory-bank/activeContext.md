@@ -65,8 +65,9 @@ None (proceeding with PRD as specified)
 - 2025-10-26: XR-01 completed (WebXR Setup and Dependencies - detection, VR button, URL parameter)
 - 2025-10-26: XR-02 completed (Camera System Conversion - dual camera, PerspectiveCamera, raycaster)
 - 2025-10-27: XR-03 completed (WebXR Session Management - VR sessions, setAnimationLoop, reference space)
+- 2025-10-28: XR-04 completed (360° Spherical Particle Space - 3D distribution, 1000 particles, radius 5-20)
 
 ## Upcoming Milestones
-- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode (3/6 tasks complete, ~4.5 hours remaining)
+- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode (4/6 tasks complete, ~3 hours remaining)
 - **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
 - **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)

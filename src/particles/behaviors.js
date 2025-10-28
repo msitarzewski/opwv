@@ -135,7 +135,7 @@ export function calculateUserAttraction(particle, mousePosition, strength, radiu
 }
 
 /**
- * Wrap position to bounds (toroidal space)
+ * Wrap position to bounds (toroidal space for 2D)
  * @param {THREE.Vector3} position - Position to wrap
  * @param {Object} bounds - {minX, maxX, minY, maxY}
  */
@@ -155,5 +155,22 @@ export function wrapBounds(position, bounds) {
     position.y = bounds.minY + (position.y - bounds.maxY)
   } else if (position.y < bounds.minY) {
     position.y = bounds.maxY + (position.y - bounds.minY)
+  }
+}
+
+/**
+ * Wrap position to spherical bounds (3D space)
+ * When particle exceeds outer radius, wrap to opposite side at inner radius
+ * @param {THREE.Vector3} position - Position to wrap (modified in-place)
+ * @param {number} innerRadius - Inner boundary radius
+ * @param {number} outerRadius - Outer boundary radius
+ */
+export function wrapSphericalBounds(position, innerRadius, outerRadius) {
+  const distance = position.length()
+
+  // If particle exceeds outer radius, wrap to opposite side at inner radius
+  if (distance > outerRadius) {
+    // Normalize to get direction, then flip and scale to inner radius
+    position.normalize().multiplyScalar(-innerRadius)
   }
 }

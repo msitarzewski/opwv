@@ -17,7 +17,7 @@ export class NoiseField {
   }
 
   /**
-   * Get 3D noise value at position and time
+   * Get 2D noise value at position and time
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
    * @param {number} time - Time offset for animation
@@ -43,6 +43,45 @@ export class NoiseField {
     return {
       x: noiseX * this.strength,
       y: noiseY * this.strength
+    }
+  }
+
+  /**
+   * Get 3D noise value at position and time
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @param {number} z - Z coordinate
+   * @param {number} time - Time offset for animation
+   * @returns {Object} - {x, y, z} noise vector
+   */
+  get3D(x, y, z, time) {
+    // Sample noise at scaled coordinates for each axis
+    // Use time as additional dimension for temporal variation
+    const noiseX = this.noise3D(
+      x * this.scale,
+      y * this.scale,
+      z * this.scale + time * this.scale
+    )
+
+    // Offset sampling to get independent noise for Y
+    const noiseY = this.noise3D(
+      x * this.scale + 1000, // Offset to decorrelate from X
+      y * this.scale + 1000,
+      z * this.scale + time * this.scale
+    )
+
+    // Offset sampling to get independent noise for Z
+    const noiseZ = this.noise3D(
+      x * this.scale + 2000, // Offset to decorrelate from X and Y
+      y * this.scale + 2000,
+      z * this.scale + time * this.scale
+    )
+
+    // Return scaled noise vector
+    return {
+      x: noiseX * this.strength,
+      y: noiseY * this.strength,
+      z: noiseZ * this.strength
     }
   }
 }

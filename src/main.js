@@ -19,7 +19,16 @@ const browserInfo = getBrowserInfo()
 
 console.log('WebXR supported:', webxrSupported, '(' + browserInfo.browser + ')')
 if (vrModeRequested && !webxrSupported) {
-  console.warn('VR mode requested but WebXR not supported in this browser')
+  const isHTTP = window.location.protocol === 'http:'
+  const isSafari = browserInfo.browser === 'Safari'
+
+  if (isHTTP && isSafari) {
+    console.warn('VR mode requested: Safari requires HTTPS for WebXR. Try accessing via https:// instead.')
+  } else if (isHTTP) {
+    console.warn('VR mode requested: WebXR requires HTTPS in most browsers. Try accessing via https:// instead.')
+  } else {
+    console.warn('VR mode requested but WebXR not supported in this browser')
+  }
 }
 
 // Get canvas element
@@ -93,15 +102,31 @@ camera3D.position.set(0, 0, 0)   // Center of particle space for 360° viewing
 const camera = vrModeRequested ? camera3D : camera2D
 
 // Initialize particle system
-// Calculate viewport bounds from 2D camera frustum (particles remain in 2D plane until XR-04)
-const bounds = {
-  minX: camera2D.left,
-  maxX: camera2D.right,
-  minY: camera2D.bottom,
-  maxY: camera2D.top
+// Bounds and particle count depend on mode (2D planar vs 3D spherical)
+let bounds
+let particleCount
+
+if (vrModeRequested) {
+  // VR mode: 3D spherical space surrounding camera at origin
+  // Particles distributed in spherical shell between inner and outer radius
+  bounds = {
+    innerRadius: 5,   // Minimum distance from origin (tuneable: 3-10)
+    outerRadius: 20   // Maximum distance from origin (tuneable: 15-30)
+  }
+  particleCount = 1000  // More particles needed for 360° coverage
+} else {
+  // 2D mode: Planar rectangular space (backward compatibility)
+  // Calculate from orthographic camera frustum
+  bounds = {
+    minX: camera2D.left,
+    maxX: camera2D.right,
+    minY: camera2D.bottom,
+    maxY: camera2D.top
+  }
+  particleCount = 500  // Original particle count for 2D
 }
 
-const particleSystem = new ParticleSystem(500, bounds, rng)
+const particleSystem = new ParticleSystem(particleCount, bounds, rng)
 scene.add(particleSystem.getPoints())
 
 // Clock for delta time (frame-rate independence)

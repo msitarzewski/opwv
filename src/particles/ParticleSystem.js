@@ -1,7 +1,7 @@
 // Particle system manager with efficient BufferGeometry rendering
 import * as THREE from 'three'
 import { Particle } from './Particle.js'
-import { calculateCohesion, calculateAlignment, calculateSeparation, calculateUserAttraction, wrapBounds } from './behaviors.js'
+import { calculateCohesion, calculateAlignment, calculateSeparation, calculateUserAttraction, wrapBounds, wrapSphericalBounds } from './behaviors.js'
 import { NoiseField } from '../utils/noise.js'
 import { generatePalette } from '../utils/colors.js'
 
@@ -127,9 +127,20 @@ export class ParticleSystem {
     const alignment = calculateAlignment(particle, alignmentNeighbors, this.config.alignmentWeight)
     const separation = calculateSeparation(particle, separationNeighbors, this.config.separationRadius, this.config.separationWeight)
 
+    // Check if bounds are spherical (3D) or planar (2D)
+    const isSpherical = this.bounds.innerRadius !== undefined && this.bounds.outerRadius !== undefined
+
     // Apply noise for organic drift
-    const noise = this.noiseField.get(particle.position.x, particle.position.y, this.time)
-    const noiseForce = new THREE.Vector3(noise.x, noise.y, 0)
+    let noiseForce
+    if (isSpherical) {
+      // 3D noise for spherical space
+      const noise = this.noiseField.get3D(particle.position.x, particle.position.y, particle.position.z, this.time)
+      noiseForce = new THREE.Vector3(noise.x, noise.y, noise.z)
+    } else {
+      // 2D noise for planar space (backward compatibility)
+      const noise = this.noiseField.get(particle.position.x, particle.position.y, this.time)
+      noiseForce = new THREE.Vector3(noise.x, noise.y, 0)
+    }
 
     // Calculate user interaction force
     const userAttraction = calculateUserAttraction(particle, mousePosition, this.config.interactionStrength, this.config.interactionRadius)
@@ -146,8 +157,12 @@ export class ParticleSystem {
       particle.velocity.normalize().multiplyScalar(this.config.maxSpeed)
     }
 
-    // Wrap around boundaries
-    wrapBounds(particle.position, this.bounds)
+    // Wrap around boundaries (mode-dependent)
+    if (isSpherical) {
+      wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
+    } else {
+      wrapBounds(particle.position, this.bounds)
+    }
   }
 
   /**
