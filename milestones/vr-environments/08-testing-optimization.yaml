@@ -1,0 +1,164 @@
+id: vr-08
+title: Testing and Optimization
+phase: VR-Environments
+priority: critical
+estimated_duration: 2.75hr
+status: pending
+
+description: |
+  Comprehensive VR testing, performance profiling, comfort assessment, and final
+  optimization for V1 release. Ensure all environments, UI, and features work
+  flawlessly in VR. Create testing documentation and production readiness report.
+
+acceptance_criteria:
+  - All environments tested in VR (Meta Quest 2/3 minimum)
+  - 72fps maintained across all environments
+  - Spatial UI comfortable and readable
+  - Speed control works smoothly in all environments
+  - Environment transitions polished and comfortable
+  - No motion sickness triggers identified
+  - Landing page tested on desktop/mobile
+  - Bundle size optimized (<600kB)
+  - TESTING-V1.md created with comprehensive test coverage
+  - Production readiness sign-off
+
+tasks:
+  - Test all 5-7 environments in VR (Quest 2/3)
+  - Profile performance of each environment (Chrome DevTools)
+  - VR comfort assessment (motion sickness checklist)
+  - Test spatial UI (gaze selection, controller selection)
+  - Test speed control in all environments
+  - Test environment transitions (all pairs)
+  - Test landing page on desktop/mobile browsers
+  - Cross-device testing (Quest, desktop VR, other headsets)
+  - Bundle size optimization (tree-shaking, minification)
+  - Final code review and cleanup
+  - Create TESTING-V1.md documentation
+  - User testing with 3-5 VR users
+  - Production build verification
+  - Create production readiness report
+
+dependencies:
+  - vr-01 (Environment System Architecture)
+  - vr-02 (VR-Only Migration)
+  - vr-03 (Spatial UI Framework)
+  - vr-04 (Speed Control System)
+  - vr-05 (Environment Presets)
+  - vr-06 (Landing Page)
+  - vr-07 (Environment Transitions)
+
+technical_notes: |
+  VR Testing Checklist:
+
+  Environment Testing (Per Environment):
+  - [ ] Loads successfully in VR
+  - [ ] Maintains 72fps (5+ minute session)
+  - [ ] No visible jitter or stuttering
+  - [ ] Particles render correctly (no clipping, z-fighting)
+  - [ ] Colors are vibrant and comfortable
+  - [ ] Spatial layout feels immersive
+  - [ ] No motion sickness after 10 min session
+  - [ ] Adaptive quality triggers correctly if FPS drops
+
+  Spatial UI Testing:
+  - [ ] Cards visible and readable at 4 units distance
+  - [ ] Gaze selection works (crosshair + dwell time)
+  - [ ] Controller selection works (laser pointer + trigger)
+  - [ ] Hover states provide clear feedback
+  - [ ] Card animations smooth (no judder)
+  - [ ] Text legible (font size, contrast)
+  - [ ] Menu toggle works (show/hide)
+  - [ ] UI maintains 72fps when visible
+
+  Speed Control Testing:
+  - [ ] Slider responds to gaze/controller input
+  - [ ] Speed changes affect particle motion in real-time
+  - [ ] Smooth transitions between speeds
+  - [ ] Preset buttons work (0.5x, 1.0x, 1.5x, 2.0x)
+  - [ ] Speed persists across sessions (localStorage)
+  - [ ] Performance stable at all speeds (72fps)
+
+  Transition Testing (All Environment Pairs):
+  - [ ] Fade to black smooth and comfortable
+  - [ ] No flashing or jarring changes
+  - [ ] Loading state displays correctly
+  - [ ] New environment initializes properly
+  - [ ] Cancel function works mid-transition
+  - [ ] Maintains 72fps during transition
+  - [ ] No motion sickness triggers
+
+  Landing Page Testing:
+  - [ ] Displays correctly on desktop Chrome/Firefox/Safari/Edge
+  - [ ] Displays correctly on mobile (iOS Safari, Chrome Android)
+  - [ ] Responsive layout works (mobile, tablet, desktop)
+  - [ ] Images load quickly (<2s on 3G)
+  - [ ] "Enter VR" button works correctly
+  - [ ] Browser compatibility info accurate
+  - [ ] Headset info accurate and up-to-date
+  - [ ] Accessibility: keyboard navigation, screen reader support
+
+  Performance Profiling:
+  - Use Chrome DevTools Performance tab
+  - Record 60s session per environment
+  - Analyze frame timing, CPU usage, memory
+  - Identify bottlenecks (rendering, JS, GC)
+  - Optimize hot paths
+
+  Bundle Size Optimization:
+  - Current: ~476kB (120kB gzipped)
+  - Target: <600kB (<150kB gzipped)
+  - Tree-shaking: Remove unused Three.js modules
+  - Minification: Terser with aggressive options
+  - Code splitting: Lazy load environments (optional)
+  - Asset optimization: Compress textures, remove debug code
+
+  Motion Sickness Assessment:
+  - Session duration: 10+ minutes per environment
+  - Tester feedback: Comfort rating (1-10)
+  - Check for: Nausea, dizziness, eye strain, disorientation
+  - Causes: Low FPS, rapid motion, camera movement, visual conflict
+  - Mitigations: Stable FPS, smooth transitions, stationary camera
+
+  User Testing Protocol:
+  - Recruit 3-5 VR users (varied experience levels)
+  - Provide test script (environment switching, speed control, UI)
+  - Observe sessions, take notes
+  - Collect feedback survey (Likert scale + open-ended)
+  - Iterate on issues found
+
+  TESTING-V1.md Structure:
+  1. Overview (V1 features, testing scope)
+  2. VR Hardware Requirements (headsets, browsers)
+  3. Environment Testing Procedures
+  4. Spatial UI Testing Procedures
+  5. Speed Control Testing
+  6. Transition Testing
+  7. Landing Page Testing
+  8. Performance Benchmarks
+  9. Known Issues and Limitations
+  10. Production Readiness Sign-Off
+
+  Production Readiness Criteria:
+  - [ ] All tests passing
+  - [ ] All environments 72fps on Quest 2
+  - [ ] No critical bugs
+  - [ ] User testing positive (avg 7+ comfort rating)
+  - [ ] Documentation complete (TESTING-V1.md)
+  - [ ] Bundle optimized (<600kB)
+  - [ ] Landing page functional
+  - [ ] Code reviewed and cleaned
+
+references:
+  - milestones/xr-test/06-testing-optimization.yaml (XR Test testing guide)
+  - TESTING-XR.md (template for TESTING-V1.md)
+  - Chrome DevTools VR profiling documentation
+  - WebXR comfort guidelines (motion sickness prevention)
+
+deliverables:
+  - TESTING-V1.md (comprehensive testing guide)
+  - VR testing report (all environments, UI, features)
+  - Performance profiling report (per environment)
+  - User testing feedback summary
+  - Bundle size optimization report
+  - Production readiness sign-off document
+  - V1 release notes (features, known issues)

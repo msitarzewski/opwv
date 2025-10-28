@@ -1,0 +1,120 @@
+id: vr-07
+title: Environment Transitions
+phase: VR-Environments
+priority: high
+estimated_duration: 2.25hr
+status: pending
+
+description: |
+  Implement smooth, polished transitions between environments with fade effects,
+  particle morphing, and loading state handling. Create Apple-quality transition
+  experience that maintains VR comfort and visual delight.
+
+acceptance_criteria:
+  - Smooth fade to black transition between environments
+  - Particle morphing (optional) for seamless visual flow
+  - No jarring pops, flashes, or sudden changes
+  - Maintains 72fps during transition
+  - Transition duration: 0.5-2.0s (user configurable)
+  - User can cancel transition mid-flight
+  - Loading state shown during environment initialization
+  - Transition feels polished and premium
+  - No motion sickness triggers
+
+tasks:
+  - Create TransitionManager class (src/transitions/TransitionManager.js)
+  - Implement fade to black effect (scene opacity)
+  - Implement crossfade effect (blend two scenes)
+  - Add particle morphing (lerp positions from env A to env B)
+  - Create transition timing controls (duration, easing)
+  - Add cancel/interrupt handling
+  - Implement loading state UI
+  - Add transition progress indicator
+  - Test transitions between all environment pairs
+  - Optimize transition performance (maintain 72fps)
+  - Add transition sound effects (optional)
+
+dependencies:
+  - vr-01 (Environment System Architecture)
+  - vr-05 (Environment Presets - multiple environments to transition between)
+
+technical_notes: |
+  Transition Types:
+
+  1. FADE TO BLACK (Primary)
+  - Fade out current environment (0.3-0.5s)
+  - Switch environment (instant, during black screen)
+  - Fade in new environment (0.3-0.5s)
+  - Total duration: 0.6-1.0s
+  - Implementation: Scene background color opacity or post-processing
+
+  2. CROSSFADE (Alternative)
+  - Render both environments simultaneously
+  - Blend opacity: env_A (1.0 → 0.0), env_B (0.0 → 1.0)
+  - Smooth transition without black screen
+  - More GPU intensive (2 particle systems)
+  - Duration: 0.5-1.0s
+
+  3. PARTICLE MORPHING (Advanced, optional)
+  - Lerp particle positions from env A to env B
+  - Lerp colors from palette A to palette B
+  - Smooth visual transformation
+  - Duration: 1.0-2.0s
+  - Computationally expensive but visually stunning
+
+  Transition Manager API:
+  - startTransition(fromEnv, toEnv, options)
+  - cancelTransition()
+  - setTransitionDuration(duration)
+  - setTransitionEasing(easingFn)
+  - Events: onTransitionStart, onTransitionComplete, onTransitionCancel
+
+  Easing Functions:
+  - ease-in-out (default): smooth acceleration/deceleration
+  - ease-in: slow start, fast end
+  - ease-out: fast start, slow end
+  - linear: constant speed
+
+  Loading State:
+  - Show "Loading..." text in VR space
+  - Progress indicator (spinner or progress bar)
+  - Prevents user interaction during transition
+  - Hides when new environment ready
+
+  Cancel Handling:
+  - User presses menu button during transition
+  - Immediately jump to destination environment
+  - Or reverse transition back to source
+  - Clear transition state
+
+  Performance Optimization:
+  - Dispose old environment geometry/materials after transition
+  - Pre-initialize new environment in background (if possible)
+  - Maintain 72fps during fade (lightweight effect)
+  - Avoid GC pauses during transition (object pooling)
+
+  Motion Sickness Prevention:
+  - No camera movement during transition
+  - Fade to black reduces visual disorientation
+  - Short duration prevents discomfort
+  - User can always cancel
+
+  Transition Sound (Optional):
+  - Subtle whoosh or chime on transition start
+  - Ambient fade out/in to match visual fade
+  - WebAudio API for spatial audio
+  - Low volume to not startle user
+
+references:
+  - https://easings.net/ (easing function visualizations)
+  - src/environments/EnvironmentManager.js (environment switching)
+  - Apple UI/UX guidelines (transition timing, easing)
+
+deliverables:
+  - src/transitions/TransitionManager.js
+  - Fade to black effect implementation
+  - Crossfade effect (optional)
+  - Particle morphing (optional)
+  - Loading state UI
+  - Transition testing report (all environment pairs)
+  - Performance report (FPS during transitions)

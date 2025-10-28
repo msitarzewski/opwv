@@ -1,0 +1,92 @@
+id: vr-01
+title: Environment System Architecture
+phase: VR-Environments
+priority: critical
+estimated_duration: 2.5hr
+status: pending
+
+description: |
+  Create the core architecture for environment management, configuration, and switching.
+  This establishes the foundation for multiple spatial environments with different
+  particle behaviors, spatial configurations, and visual aesthetics.
+
+acceptance_criteria:
+  - Environment class defined with complete configuration schema
+  - EnvironmentManager can load and switch between environments
+  - Configuration includes spatial layout, behavior weights, colors, speed
+  - Backward compatible with existing particle system
+  - No breaking changes to current VR mode
+  - Clean separation of concerns (environment config vs particle logic)
+
+tasks:
+  - Design environment configuration schema (spatial, behavior, visual, performance)
+  - Create Environment class (src/environments/Environment.js)
+  - Create EnvironmentManager class (src/environments/EnvironmentManager.js)
+  - Implement environment loading and initialization
+  - Implement environment switching mechanism
+  - Create presets directory structure (src/environments/presets/)
+  - Add environment state management
+  - Test with current spherical particle system
+
+dependencies: []
+
+technical_notes: |
+  Environment Configuration Schema:
+  {
+    id: string,
+    name: string,
+    description: string,
+    spatial: {
+      type: 'spherical' | 'planar' | 'lattice' | 'vortex' | 'custom',
+      particleCount: number,
+      bounds: { /* type-specific bounds */ },
+      initializationFn: (particle, rng, bounds) => void
+    },
+    behavior: {
+      cohesionRadius: number,
+      cohesionWeight: number,
+      alignmentRadius: number,
+      alignmentWeight: number,
+      separationRadius: number,
+      separationWeight: number,
+      maxSpeed: number,
+      noiseScale: number,
+      noiseStrength: number
+    },
+    visual: {
+      colorPalette: string[] | ColorGenerator,
+      particleSize: number,
+      opacity: number,
+      sizeAttenuation: boolean
+    },
+    performance: {
+      targetFPS: number,
+      minFPS: number,
+      adaptiveQuality: boolean
+    }
+  }
+
+  EnvironmentManager responsibilities:
+  - Load environment configurations from presets
+  - Switch between environments (with transition support)
+  - Manage environment state
+  - Coordinate with ParticleSystem for re-initialization
+  - Handle environment-specific behaviors
+
+  Integration with existing code:
+  - ParticleSystem should accept environment config
+  - Maintain current behavior as baseline environment
+  - Environment switching triggers particle re-initialization
+
+references:
+  - src/particles/ParticleSystem.js (existing particle system)
+  - src/particles/behaviors.js (behavior functions)
+  - memory-bank/systemPatterns.md#Architecture Overview
+  - milestones/mvp/04-particle-system-foundation.yaml
+
+deliverables:
+  - src/environments/Environment.js
+  - src/environments/EnvironmentManager.js
+  - src/environments/presets/ (directory)
+  - Environment configuration schema documentation
+  - Integration tests with existing particle system

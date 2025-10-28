@@ -1,0 +1,126 @@
+id: vr-05
+title: Environment Presets
+phase: VR-Environments
+priority: critical
+estimated_duration: 4.5hr
+status: pending
+
+description: |
+  Create 5-7 unique spatial environments inspired by 90's Mind's Eye aesthetic.
+  Each environment features distinct spatial configuration, particle behavior,
+  color palette, and visual identity. Productivity-focused, meditative experiences
+  with psychedelic, abstract, mathematical visual style.
+
+acceptance_criteria:
+  - 5-7 unique environments implemented
+  - Each has distinct spatial configuration
+  - Each has unique visual aesthetic
+  - Mind's Eye aesthetic (psychedelic, abstract, mathematical)
+  - Productivity-focused (calming, meditative, not distracting)
+  - All maintain 72fps in VR (1000 particles max)
+  - Color palettes harmonious and vibrant
+  - Environment configs follow schema from VR-01
+
+tasks:
+  - Design 5-7 spatial configurations (math and aesthetics)
+  - Create Sphere preset (baseline, current behavior)
+  - Create Nebula preset (organic cloud formation)
+  - Create Galaxy preset (spiral galaxy structure)
+  - Create Lattice preset (3D geometric grid)
+  - Create Vortex preset (swirling tornado/funnel)
+  - Create Ocean preset (undulating wave plane)
+  - Create Hypercube preset (4D projection/tesseract)
+  - Tune behavior weights for each environment
+  - Design color palettes for each environment
+  - Test each environment in VR for comfort and aesthetics
+  - Document environment inspirations and design notes
+
+dependencies:
+  - vr-01 (Environment System Architecture)
+
+technical_notes: |
+  Environment Preset Specifications:
+
+  1. SPHERE (Baseline)
+  - Spatial: Spherical shell (innerRadius: 5, outerRadius: 20)
+  - Particles: 1000
+  - Behavior: Current flocking + noise (baseline)
+  - Colors: Analogous palette (existing)
+  - Inspiration: Current implementation
+
+  2. NEBULA (Organic Cloud)
+  - Spatial: Clustered blob with soft boundaries
+  - Initialization: Gaussian distribution around multiple centers
+  - Particles: 800-1000
+  - Behavior: Strong cohesion, weak separation, high noise
+  - Colors: Deep space palette (purples, blues, magentas)
+  - Inspiration: Interstellar gas clouds
+
+  3. GALAXY (Spiral Arms)
+  - Spatial: Logarithmic spiral formation
+  - Initialization: Archimedean spiral with radial variation
+  - Particles: 1000
+  - Behavior: Orbital motion, moderate flocking
+  - Colors: Galactic palette (blues, whites, yellows)
+  - Inspiration: Spiral galaxies (Andromeda, Milky Way)
+
+  4. LATTICE (Geometric Grid)
+  - Spatial: 3D cubic lattice with some randomness
+  - Initialization: Grid positions with jitter
+  - Particles: 729 (9×9×9 grid)
+  - Behavior: Low flocking, attraction to lattice points
+  - Colors: Neon palette (cyan, magenta, yellow)
+  - Inspiration: Sacred geometry, Platonic solids
+
+  5. VORTEX (Swirling Funnel)
+  - Spatial: Tornado/vortex formation
+  - Initialization: Cylindrical with angular velocity
+  - Particles: 1000
+  - Behavior: Rotational force, upward drift
+  - Colors: Energy palette (oranges, reds, yellows)
+  - Inspiration: Fluid dynamics, hurricanes
+
+  6. OCEAN (Wave Plane)
+  - Spatial: Undulating horizontal plane
+  - Initialization: Sine wave heights with noise
+  - Particles: 900
+  - Behavior: Wave propagation, cohesion
+  - Colors: Aquatic palette (blues, greens, teals)
+  - Inspiration: Ocean waves, water simulation
+
+  7. HYPERCUBE (4D Projection)
+  - Spatial: Tesseract (4D cube) projection to 3D
+  - Initialization: Vertices and edges of 4D hypercube
+  - Particles: 800
+  - Behavior: Rotation in 4D space, projected to 3D
+  - Colors: Abstract palette (full spectrum rotation)
+  - Inspiration: Tesseract visualizations, 4D geometry
+
+  Math References:
+  - Logarithmic spiral: r = a * e^(b*θ)
+  - Gaussian distribution: f(x) = (1/(σ√(2π))) * e^(-((x-μ)²/(2σ²)))
+  - Tesseract projection: Standard 4D rotation matrices
+  - Sine wave: y = A * sin(ωx + φ)
+
+  Performance Tuning:
+  - Each environment tested at 72fps
+  - Particle counts adjusted if needed
+  - Behavior weights tuned for smooth motion
+  - Noise scales calibrated per environment
+
+references:
+  - Mind's Eye (1990) - visual aesthetic reference
+  - https://en.wikipedia.org/wiki/Tesseract (hypercube math)
+  - Craig Reynolds boids algorithm (flocking behaviors)
+  - src/environments/Environment.js (environment schema)
+
+deliverables:
+  - src/environments/presets/sphere.js
+  - src/environments/presets/nebula.js
+  - src/environments/presets/galaxy.js
+  - src/environments/presets/lattice.js
+  - src/environments/presets/vortex.js
+  - src/environments/presets/ocean.js (optional)
+  - src/environments/presets/hypercube.js (optional)
+  - Environment design documentation
+  - VR testing report for each environment

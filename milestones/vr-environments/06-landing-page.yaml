@@ -1,0 +1,107 @@
+id: vr-06
+title: Landing Page
+phase: VR-Environments
+priority: medium
+estimated_duration: 1.25hr
+status: pending
+
+description: |
+  Create a beautiful HTML landing page for non-VR browsers, replacing the 2D canvas
+  experience. Communicate VR requirement, showcase environment previews, provide
+  browser/headset compatibility info, and guide users to VR mode.
+
+acceptance_criteria:
+  - Landing page displays when WebXR not supported
+  - Clear messaging about VR requirement
+  - Visual preview of environments (screenshots or video)
+  - Browser compatibility information
+  - Supported headsets listed
+  - Apple-like design aesthetic (clean, minimal, beautiful)
+  - Responsive design (mobile and desktop)
+  - Fast loading (<2s on 3G)
+  - Accessibility compliant (WCAG 2.1 AA)
+
+tasks:
+  - Design landing page layout (wireframe)
+  - Create landing.html (or update index.html with conditional)
+  - Add VR requirement messaging
+  - Add environment preview gallery
+  - List supported browsers (Chrome, Edge, Firefox, Safari)
+  - List supported headsets (Quest 2/3, Rift, Vive, Index, etc.)
+  - Add "Enter VR" call-to-action button
+  - Style with Apple-like aesthetic (glassmorphism, clean typography)
+  - Optimize images and assets
+  - Test on mobile and desktop browsers
+  - Add meta tags for SEO and social sharing
+
+dependencies: []
+
+technical_notes: |
+  Landing Page Structure:
+  - Hero section: "OPWV - VR Particle Experiences"
+  - Requirement section: "WebXR Required" with browser icons
+  - Preview section: Gallery of environment screenshots
+  - About section: Brief description of Mind's Eye inspiration
+  - CTA section: "Enter VR" button (launches VR mode)
+  - Footer: Links to GitHub, credits, license
+
+  VR Detection:
+  - Check navigator.xr availability on page load
+  - If WebXR supported: Show "Enter VR" button, auto-enter option
+  - If not supported: Show landing page with browser/headset info
+  - Mobile detection: Show mobile-specific messaging
+
+  Design Aesthetic (Apple-like):
+  - Typography: SF Pro Text or system-ui fallback
+  - Colors: Dark theme with accent colors
+  - Glassmorphism: backdrop-filter: blur(10px)
+  - Spacing: Generous white space, 8px grid
+  - Animations: Subtle fade-ins, smooth transitions
+  - Images: High-quality environment screenshots
+
+  Environment Preview Gallery:
+  - 5-7 environment preview images
+  - Grid layout on desktop, carousel on mobile
+  - Hover effects: Scale, glow, description overlay
+  - Each card shows: Environment name, brief description
+  - Click opens full-screen preview (optional)
+
+  Browser Compatibility Messaging:
+  - WebXR supported: Chrome 79+, Edge 79+, Firefox 98+
+  - Safari 15.4+ (with WebXR Device API flag)
+  - Mobile: Oculus Browser, Chrome Android, Firefox Reality
+  - Desktop VR: SteamVR browsers, Oculus PC software
+
+  Supported Headsets:
+  - Meta Quest 2/3/Pro
+  - HTC Vive / Vive Pro / Vive Cosmos
+  - Valve Index
+  - Oculus Rift S
+  - Windows Mixed Reality
+  - Pico Neo 3 / 4
+
+  Performance Optimization:
+  - Lazy load images
+  - Critical CSS inline
+  - Defer non-critical JavaScript
+  - Compress images (WebP format)
+  - Minimize HTTP requests
+
+  SEO Meta Tags:
+  <meta name="description" content="Immersive VR particle visualization experiences inspired by Mind's Eye">
+  <meta property="og:title" content="OPWV - VR Particle Experiences">
+  <meta property="og:image" content="preview.jpg">
+  <meta property="og:type" content="website">
+
+references:
+  - Apple.com design patterns (design inspiration)
+  - https://caniuse.com/webxr (browser compatibility)
+  - https://immersiveweb.dev/ (WebXR resources)
+
+deliverables:
+  - landing.html (or conditional in index.html)
+  - landing.css (styles)
+  - Environment preview images (5-7 screenshots)
+  - Browser/headset icons
+  - Mobile-responsive testing report
+  - Accessibility audit report (WCAG 2.1 AA)

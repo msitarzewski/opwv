@@ -1,48 +1,89 @@
 // Particle system manager with efficient BufferGeometry rendering
 import * as THREE from 'three'
 import { Particle } from './Particle.js'
-import { calculateCohesion, calculateAlignment, calculateSeparation, calculateUserAttraction, wrapBounds, wrapSphericalBounds } from './behaviors.js'
+import { calculateCohesion, calculateAlignment, calculateSeparation, calculateUserAttraction, wrapSphericalBounds } from './behaviors.js'
 import { NoiseField } from '../utils/noise.js'
 import { generatePalette } from '../utils/colors.js'
+import { Environment } from '../environments/Environment.js'
 
 export class ParticleSystem {
   /**
    * Create a particle system with N particles
-   * @param {number} count - Number of particles to create
-   * @param {Object} bounds - {minX, maxX, minY, maxY} viewport bounds
+   *
+   * Supports two constructor signatures for backward compatibility:
+   * 1. NEW: ParticleSystem(environment, null, rng) - Environment-driven config
+   * 2. OLD: ParticleSystem(count, bounds, rng) - Legacy direct parameters
+   *
+   * @param {Environment|number} countOrEnvironment - Environment instance or particle count
+   * @param {Object|null} bounds - Bounds object (legacy) or null (environment mode)
    * @param {SeededRandom} rng - Optional seeded random number generator
    */
-  constructor(count, bounds, rng = null) {
-    this.count = count
-    this.bounds = bounds
+  constructor(countOrEnvironment, bounds = null, rng = null) {
     this.particles = []
     this.rng = rng
-
-    // Generate color palette (if rng provided)
-    this.palette = rng ? generatePalette(rng, 3) : null
-
-    // Behavior configuration for organic motion
-    this.config = {
-      cohesionRadius: 2.0,
-      cohesionWeight: 0.05,
-      alignmentRadius: 2.0,
-      alignmentWeight: 0.05,
-      separationRadius: 1.0,
-      separationWeight: 0.1,
-      maxSpeed: 2.0,
-      interactionStrength: 1.0,
-      interactionRadius: 4.0
-    }
-
-    // Noise field for organic drift
-    this.noiseField = new NoiseField(0.5, 0.3) // scale, strength
-
-    // Time tracking for noise animation
     this.time = 0
 
+    // Detect constructor mode: Environment instance vs. legacy parameters
+    if (countOrEnvironment instanceof Environment) {
+      // NEW PATH: Environment-driven configuration
+      const env = countOrEnvironment
+
+      // Extract spatial configuration
+      this.count = env.spatial.particleCount
+      this.bounds = env.spatial.bounds
+
+      // Generate color palette (if rng provided)
+      this.palette = rng ? generatePalette(rng, 3) : null
+
+      // Apply behavior configuration from environment
+      this.config = {
+        cohesionRadius: env.behavior.cohesionRadius,
+        cohesionWeight: env.behavior.cohesionWeight,
+        alignmentRadius: env.behavior.alignmentRadius,
+        alignmentWeight: env.behavior.alignmentWeight,
+        separationRadius: env.behavior.separationRadius,
+        separationWeight: env.behavior.separationWeight,
+        maxSpeed: env.behavior.maxSpeed,
+        interactionStrength: 1.0,  // Not yet configurable per environment
+        interactionRadius: 4.0      // Not yet configurable per environment
+      }
+
+      // Initialize noise field from environment parameters
+      this.noiseField = new NoiseField(env.behavior.noiseScale, env.behavior.noiseStrength)
+
+      // Store environment reference for material updates
+      this.environment = env
+
+    } else {
+      // LEGACY PATH: Direct parameters (backward compatibility)
+      this.count = countOrEnvironment
+      this.bounds = bounds
+
+      // Generate color palette (if rng provided)
+      this.palette = rng ? generatePalette(rng, 3) : null
+
+      // Use hardcoded defaults (existing behavior)
+      this.config = {
+        cohesionRadius: 2.0,
+        cohesionWeight: 0.05,
+        alignmentRadius: 2.0,
+        alignmentWeight: 0.05,
+        separationRadius: 1.0,
+        separationWeight: 0.1,
+        maxSpeed: 2.0,
+        interactionStrength: 1.0,
+        interactionRadius: 4.0
+      }
+
+      // Hardcoded noise field (existing behavior)
+      this.noiseField = new NoiseField(0.5, 0.3)
+
+      this.environment = null
+    }
+
     // Create particle instances
-    for (let i = 0; i < count; i++) {
-      this.particles.push(new Particle(bounds, this.rng, this.palette))
+    for (let i = 0; i < this.count; i++) {
+      this.particles.push(new Particle(this.bounds, this.rng, this.palette))
     }
 
     // Create BufferGeometry for efficient rendering
@@ -77,13 +118,25 @@ export class ParticleSystem {
     this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
     // Create PointsMaterial
-    this.material = new THREE.PointsMaterial({
-      size: 3, // Base size in pixels (individual sizes in MVP-05+)
-      vertexColors: true, // Use color attribute from geometry
-      transparent: true,
-      opacity: 0.8,
-      sizeAttenuation: false // Constant size regardless of camera distance
-    })
+    // If environment provided, use visual config; otherwise use defaults
+    if (this.environment) {
+      this.material = new THREE.PointsMaterial({
+        size: this.environment.visual.particleSize,
+        vertexColors: true,
+        transparent: true,
+        opacity: this.environment.visual.opacity,
+        sizeAttenuation: this.environment.visual.sizeAttenuation
+      })
+    } else {
+      // Legacy defaults (existing behavior)
+      this.material = new THREE.PointsMaterial({
+        size: 3,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.8,
+        sizeAttenuation: false
+      })
+    }
 
     // Create Points mesh (single draw call for all particles)
     this.points = new THREE.Points(this.geometry, this.material)
@@ -127,20 +180,9 @@ export class ParticleSystem {
     const alignment = calculateAlignment(particle, alignmentNeighbors, this.config.alignmentWeight)
     const separation = calculateSeparation(particle, separationNeighbors, this.config.separationRadius, this.config.separationWeight)
 
-    // Check if bounds are spherical (3D) or planar (2D)
-    const isSpherical = this.bounds.innerRadius !== undefined && this.bounds.outerRadius !== undefined
-
-    // Apply noise for organic drift
-    let noiseForce
-    if (isSpherical) {
-      // 3D noise for spherical space
-      const noise = this.noiseField.get3D(particle.position.x, particle.position.y, particle.position.z, this.time)
-      noiseForce = new THREE.Vector3(noise.x, noise.y, noise.z)
-    } else {
-      // 2D noise for planar space (backward compatibility)
-      const noise = this.noiseField.get(particle.position.x, particle.position.y, this.time)
-      noiseForce = new THREE.Vector3(noise.x, noise.y, 0)
-    }
+    // VR-only: Always use 3D noise for spherical space
+    const noise = this.noiseField.get3D(particle.position.x, particle.position.y, particle.position.z, this.time)
+    const noiseForce = new THREE.Vector3(noise.x, noise.y, noise.z)
 
     // Calculate user interaction force
     const userAttraction = calculateUserAttraction(particle, mousePosition, this.config.interactionStrength, this.config.interactionRadius)
@@ -157,12 +199,8 @@ export class ParticleSystem {
       particle.velocity.normalize().multiplyScalar(this.config.maxSpeed)
     }
 
-    // Wrap around boundaries (mode-dependent)
-    if (isSpherical) {
-      wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
-    } else {
-      wrapBounds(particle.position, this.bounds)
-    }
+    // VR-only: Always use spherical boundary wrapping
+    wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
   }
 
   /**

@@ -1,8 +1,8 @@
 # Active Context
 
-**Last Updated**: 2025-10-26
-**Current Phase**: MVP Complete - Ready for Production Deployment
-**Sprint Focus**: Manual testing verification and production deployment
+**Last Updated**: 2025-10-28
+**Current Phase**: VR Environments Implementation (2/8 tasks complete)
+**Sprint Focus**: VR Environments milestone (8 tasks, 18-22 hours, 4.25hr complete)
 
 ## Current Sprint Goals
 1. ✅ Initialize project structure and development environment
@@ -13,11 +13,13 @@
 6. ✅ Add mouse/touch interaction
 7. ✅ Performance optimization for 60fps
 8. ✅ Final testing and optimization
+9. ✅ Environment system architecture (VR-01)
+10. ✅ VR-only migration (VR-02)
 
 ## Active Work
-- **Status**: MVP Development ✅ 100% COMPLETE (10/10 tasks)
-- **Milestone**: MVP completion achieved
-- **Current Task**: Manual testing verification (TESTING.md) → Production deployment
+- **Status**: VR-02 ✅ COMPLETE - VR-Only Migration
+- **Milestone**: V1 VR Environments (2/8 tasks complete)
+- **Current Task**: Ready for VR-03 (Spatial UI Framework) or VR-05 (Environment Presets)
 
 ## Immediate Next Steps
 1. ✅ Set up Vite project structure (MVP-01)
@@ -31,8 +33,21 @@
 9. ✅ Add mouse/touch interaction (MVP-08)
 10. ✅ Implement performance monitoring (MVP-09)
 11. ✅ Final testing and optimization (MVP-10)
-12. **Manual testing verification** (TESTING.md - cross-browser, mobile, profiling)
-13. **Production deployment** (static hosting after testing sign-off)
+12. ✅ WebXR Setup and Dependencies (XR-01)
+13. ✅ Camera System Conversion (XR-02)
+14. ✅ WebXR Session Management (XR-03)
+15. ✅ 360° Spherical Particle Space (XR-04)
+16. ✅ VR Rendering Loop (XR-05)
+17. ✅ XR Testing and Optimization (XR-06)
+18. ✅ V1 Planning (VR Environments milestone - 8 tasks defined)
+19. ✅ **VR-01**: Environment System Architecture (2.5hr)
+20. ✅ **VR-02**: VR-Only Migration (1.75hr)
+21. **VR-03**: Spatial UI Framework (3.5hr)
+22. **VR-04**: Speed Control System (1.75hr)
+23. **VR-05**: Environment Presets (4.5hr)
+24. **VR-06**: Landing Page (1.25hr)
+25. **VR-07**: Environment Transitions (2.25hr)
+26. **VR-08**: Testing and Optimization (2.75hr)
 
 ## Current Blockers
 None
@@ -66,8 +81,20 @@ None (proceeding with PRD as specified)
 - 2025-10-26: XR-02 completed (Camera System Conversion - dual camera, PerspectiveCamera, raycaster)
 - 2025-10-27: XR-03 completed (WebXR Session Management - VR sessions, setAnimationLoop, reference space)
 - 2025-10-28: XR-04 completed (360° Spherical Particle Space - 3D distribution, 1000 particles, radius 5-20)
+- 2025-10-28: XR-05 completed (VR Rendering Loop - timestamp delta, 72fps target, VR-tested immersive)
+- 2025-10-28: XR-06 completed (XR Testing and Optimization - TESTING-XR.md, performance docs, 2D regression)
+- 2025-10-28: **XR TEST MILESTONE 100% COMPLETE** - 360° immersive VR viewing mode fully implemented and tested
+- 2025-10-28: **V1 PLANNING COMPLETE** - VR Environments milestone defined (8 tasks, 18-22hr, Mind's Eye aesthetic)
+- 2025-10-28: VR-01 completed (Environment System Architecture - Environment class, EnvironmentManager, sphere preset)
+- 2025-10-28: VR-02 completed (VR-Only Migration - removed 2D mode, single camera, -3.49 kB bundle reduction)
 
 ## Upcoming Milestones
-- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode (4/6 tasks complete, ~3 hours remaining)
-- **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
-- **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)
+- **XR Test (✅ COMPLETE)**: WebXR 360° immersive viewing mode (6/6 tasks complete, user tested: "That's amazing!")
+- **VR Environments (PLANNED)**: V1 release with multiple spatial environments (8 tasks, 18-22hr)
+  - Vision Pro-style spatial UI for environment selection
+  - 5-7 environments (Sphere, Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube)
+  - Mind's Eye aesthetic (90's psychedelic, abstract, mathematical)
+  - User-controlled speed (0.25x-2.0x productivity focus)
+  - VR-only experience (remove 2D mode, add landing page)
+  - Apple-quality transitions and polish
+- **Production Deployment**: Deploy V1 to GitHub Pages or static hosting

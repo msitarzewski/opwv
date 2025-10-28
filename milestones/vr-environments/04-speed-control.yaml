@@ -1,0 +1,86 @@
+id: vr-04
+title: Speed Control System
+phase: VR-Environments
+priority: high
+estimated_duration: 1.75hr
+status: pending
+
+description: |
+  Implement user-adjustable movement speed control for productivity-focused use.
+  Allow users to slow down or speed up particle movement to match their focus state.
+  Add spatial UI controls in VR and persist preferences across sessions.
+
+acceptance_criteria:
+  - Speed control UI integrated into spatial menu
+  - Speed multiplier range: 0.25x - 2.0x
+  - Particle velocity affected in real-time
+  - Smooth transitions when changing speed
+  - Speed preference persists (localStorage)
+  - Default speed: 1.0x (current behavior)
+  - UI shows current speed percentage
+  - Preset speed buttons (0.5x, 1.0x, 1.5x, 2.0x)
+
+tasks:
+  - Create SpeedControl class (src/controls/SpeedControl.js)
+  - Add speed multiplier to ParticleSystem.update()
+  - Create speed slider UI component for VR
+  - Add preset speed buttons (Quick, Normal, Fast, Rapid)
+  - Implement localStorage persistence
+  - Add smooth speed transitions (lerp over time)
+  - Integrate with SpatialUI menu
+  - Test speed control in all environments
+  - Verify performance at different speeds
+
+dependencies:
+  - vr-03 (Spatial UI Framework - UI integration)
+
+technical_notes: |
+  Speed Multiplier Implementation:
+  - Multiply delta time by speed multiplier in update loop
+  - delta *= speedMultiplier (e.g., 0.5x = half speed)
+  - Affects particle velocity updates
+  - Affects noise time progression
+  - Does NOT affect render FPS (always 72fps)
+
+  Speed Range:
+  - 0.25x: Very slow (deep focus, meditation)
+  - 0.5x: Slow (concentration mode)
+  - 1.0x: Normal (default, current behavior)
+  - 1.5x: Fast (energetic, dynamic)
+  - 2.0x: Very fast (high energy, rapid motion)
+
+  UI Design (VR Spatial Menu):
+  - Horizontal slider with tick marks
+  - Current speed display (e.g., "1.5x")
+  - Quick preset buttons below slider
+  - Button labels: "Slow" (0.5x), "Normal" (1.0x), "Fast" (1.5x), "Rapid" (2.0x)
+  - Visual feedback: Slider thumb position, speed percentage
+
+  Smooth Transitions:
+  - When speed changes, lerp over 0.3-0.5s
+  - Avoid jarring jumps in particle motion
+  - Use ease-in-out curve for natural feel
+
+  localStorage Persistence:
+  - Key: 'opwv_speed_multiplier'
+  - Value: float (0.25 - 2.0)
+  - Load on init, save on change
+  - Fallback: 1.0 if not set
+
+  Performance Considerations:
+  - Higher speeds may stress CPU (more updates per second)
+  - Monitor FPS at 2.0x speed
+  - Adaptive quality should handle if needed
+  - No performance impact at 1.0x (baseline)
+
+references:
+  - src/particles/ParticleSystem.js:173 (update method)
+  - src/main.js (delta time calculation)
+  - milestones/vr-environments/03-spatial-ui-framework.yaml
+
+deliverables:
+  - src/controls/SpeedControl.js
+  - Speed slider UI component
+  - localStorage integration
+  - Updated ParticleSystem.update() with speed multiplier
+  - Speed control testing report (all speeds, all environments)

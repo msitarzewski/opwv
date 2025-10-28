@@ -1,0 +1,94 @@
+id: vr-03
+title: Spatial UI Framework
+phase: VR-Environments
+priority: critical
+estimated_duration: 3.5hr
+status: pending
+
+description: |
+  Build Vision Pro-style spatial UI system for environment selection in VR.
+  Implement floating 3D cards arranged in an arc around the user, with gaze-based
+  and controller-based selection. Create immersive, Apple-quality UI experience.
+
+acceptance_criteria:
+  - Floating environment cards visible in VR space
+  - Cards arranged in spatial arc (3-4 units from camera)
+  - Gaze-based selection working (crosshair + dwell time)
+  - Controller selection working (raycaster + trigger)
+  - Cards show environment preview, name, description
+  - Smooth animations (fade in/out, scale, hover states)
+  - Apple-quality visual design (glassmorphic, clean)
+  - UI maintains 72fps in VR
+  - Comfortable viewing distance and size
+
+tasks:
+  - Research Three.js CSS3DRenderer for VR UI
+  - Design spatial card layout (arc formation math)
+  - Create SpatialUI manager class (src/ui/SpatialUI.js)
+  - Create EnvironmentCard component (src/ui/EnvironmentCard.js)
+  - Implement gaze-based selection (raycaster from camera)
+  - Implement controller selection (WebXR Gamepad API)
+  - Add hover states and selection feedback
+  - Create card animations (fade, scale, position)
+  - Style cards with glassmorphic design
+  - Test UI comfort and readability in VR
+  - Add menu toggle (show/hide UI)
+
+dependencies:
+  - vr-02 (VR-Only Migration - clean camera setup)
+
+technical_notes: |
+  Spatial Layout Math:
+  - Arc radius: 4 units from camera
+  - Card spacing: 20-30° angular separation
+  - Card size: ~1.5 units wide × 2 units tall
+  - Vertical position: Eye level (y=0 for camera at origin)
+  - Arc formation: Cards arranged in 180° arc in front of user
+
+  Gaze-based Selection:
+  - Raycaster from camera.position, camera.getWorldDirection()
+  - Crosshair overlay in center of view
+  - Dwell time: 0.8s (comfortable for VR)
+  - Visual feedback: Progress circle around crosshair
+  - On selection: Trigger environment change
+
+  Controller Selection (WebXR Gamepad):
+  - Use XRInputSource raycasting
+  - Trigger button (index 0) for selection
+  - Visual laser pointer from controller
+  - Haptic feedback on hover/selection
+
+  UI Rendering Options:
+  1. Three.js mesh-based UI (TextGeometry + PlaneGeometry)
+     - Pros: Native Three.js, good performance
+     - Cons: Text rendering complexity
+  2. CSS3DRenderer overlays
+     - Pros: Easy HTML/CSS styling
+     - Cons: Performance concerns in VR
+  3. Canvas texture on plane geometry
+     - Pros: Flexible, good performance
+     - Cons: Requires manual canvas rendering
+
+  Recommended: Option 3 (canvas texture) for best VR performance
+
+  Card Design:
+  - Background: Semi-transparent gradient (rgba)
+  - Border: Subtle glow (1px, white, 30% opacity)
+  - Text: System font, white, high contrast
+  - Preview: Small particle animation or static image
+  - Hover state: Glow intensity increase, scale 1.05
+  - Selected state: Border glow, scale 1.1
+
+references:
+  - https://threejs.org/docs/#examples/en/renderers/CSS3DRenderer
+  - https://developer.mozilla.org/en-US/docs/Web/API/WebXR_Device_API/Inputs
+  - Vision Pro design guidelines (spatial UI best practices)
+  - memory-bank/systemPatterns.md#Interaction Patterns
+
+deliverables:
+  - src/ui/SpatialUI.js
+  - src/ui/EnvironmentCard.js
+  - src/ui/GazeController.js (gaze-based selection)
+  - src/ui/ControllerInput.js (WebXR controller handling)
+  - src/ui/styles/ (card styling utilities)
+  - VR UI testing report (comfort, readability)

@@ -3,33 +3,19 @@
 
 import * as THREE from 'three'
 import { ParticleSystem } from './particles/ParticleSystem.js'
+import { EnvironmentManager } from './environments/EnvironmentManager.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
-import { getVRModeFromURL, isWebXRSupported, isVRSessionSupported, getBrowserInfo, requestVRSession, endVRSession } from './utils/webxr.js'
+import { isWebXRSupported, isVRSessionSupported, requestVRSession, endVRSession } from './utils/webxr.js'
 
 // Generate or parse seed for reproducible randomization
 const seed = getSeedFromURL() || generateSeed()
 const rng = new SeededRandom(seed)
 console.log('Seed:', seed, '(use ?seed=' + seed + ' to reproduce this visual)')
 
-// Check for VR mode request
-const vrModeRequested = getVRModeFromURL()
+// VR-only application: Check WebXR support
 const webxrSupported = isWebXRSupported()
-const browserInfo = getBrowserInfo()
-
-console.log('WebXR supported:', webxrSupported, '(' + browserInfo.browser + ')')
-if (vrModeRequested && !webxrSupported) {
-  const isHTTP = window.location.protocol === 'http:'
-  const isSafari = browserInfo.browser === 'Safari'
-
-  if (isHTTP && isSafari) {
-    console.warn('VR mode requested: Safari requires HTTPS for WebXR. Try accessing via https:// instead.')
-  } else if (isHTTP) {
-    console.warn('VR mode requested: WebXR requires HTTPS in most browsers. Try accessing via https:// instead.')
-  } else {
-    console.warn('VR mode requested but WebXR not supported in this browser')
-  }
-}
+console.log('WebXR supported:', webxrSupported)
 
 // Get canvas element
 const canvas = document.querySelector('#canvas')
@@ -42,16 +28,8 @@ if (!canvas) {
 // Get VR button element
 const vrButton = document.querySelector('#vr-button')
 
-// Mouse/touch position in world coordinates (null when no interaction)
-let mousePosition = null
-
 // WebXR session state
 let xrSession = null
-
-// Raycaster for PerspectiveCamera mouse interaction
-const raycaster = new THREE.Raycaster()
-// Plane at z=0 for raycasting (particles are in XY plane)
-const interactionPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
 
 // Initialize Three.js renderer
 const renderer = new THREE.WebGLRenderer({
@@ -74,81 +52,77 @@ if (webxrSupported) {
 // Create scene
 const scene = new THREE.Scene()
 
-// Create cameras for 2D and VR modes
+// VR-only: PerspectiveCamera for immersive 360° viewing
 const aspect = window.innerWidth / window.innerHeight
-const frustumSize = 10
-
-// OrthographicCamera for 2D mode (existing MVP behavior)
-const camera2D = new THREE.OrthographicCamera(
-  (frustumSize * aspect) / -2,  // left
-  (frustumSize * aspect) / 2,   // right
-  frustumSize / 2,               // top
-  frustumSize / -2,              // bottom
-  0.1,                           // near
-  100                            // far
-)
-camera2D.position.z = 5
-
-// PerspectiveCamera for VR mode (360° viewing from center)
-const camera3D = new THREE.PerspectiveCamera(
+const camera = new THREE.PerspectiveCamera(
   100,                           // fov (VR-appropriate wide angle)
   aspect,                        // aspect ratio
   0.1,                           // near (see close particles)
   1000                           // far (encompass entire particle space)
 )
-camera3D.position.set(0, 0, 0)   // Center of particle space for 360° viewing
+camera.position.set(0, 0, 0)     // Center of particle space for 360° viewing
 
-// Select camera based on VR mode
-const camera = vrModeRequested ? camera3D : camera2D
-
-// Initialize particle system
-// Bounds and particle count depend on mode (2D planar vs 3D spherical)
-let bounds
-let particleCount
-
-if (vrModeRequested) {
-  // VR mode: 3D spherical space surrounding camera at origin
-  // Particles distributed in spherical shell between inner and outer radius
-  bounds = {
-    innerRadius: 5,   // Minimum distance from origin (tuneable: 3-10)
-    outerRadius: 20   // Maximum distance from origin (tuneable: 15-30)
-  }
-  particleCount = 1000  // More particles needed for 360° coverage
-} else {
-  // 2D mode: Planar rectangular space (backward compatibility)
-  // Calculate from orthographic camera frustum
-  bounds = {
-    minX: camera2D.left,
-    maxX: camera2D.right,
-    minY: camera2D.bottom,
-    maxY: camera2D.top
-  }
-  particleCount = 500  // Original particle count for 2D
-}
-
-const particleSystem = new ParticleSystem(particleCount, bounds, rng)
-scene.add(particleSystem.getPoints())
-
-// Clock for delta time (frame-rate independence)
-const clock = new THREE.Clock()
+// Initialize Environment Manager
+// VR-01: Environment-based architecture (sphere preset as baseline)
+const environmentManager = new EnvironmentManager(scene, camera, renderer, rng)
 
 // Performance monitoring for adaptive quality
-const performanceMonitor = new PerformanceMonitor()
+// VR-only: Target 72fps (Quest 2/3 baseline)
+const performanceMonitor = new PerformanceMonitor({
+  targetFPS: 72,
+  minFPS: 65
+})
+
+// Async initialization function (avoids top-level await)
+async function initializeEnvironment() {
+  try {
+    // Load sphere preset asynchronously
+    // Note: This is the baseline environment matching existing XR Test behavior
+    await environmentManager.loadPreset('sphere')
+
+    // Initialize particle system from environment configuration
+    environmentManager.initializeParticleSystem()
+
+    console.log('Environment initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize environment:', error)
+    alert('Failed to load particle environment. Please refresh the page.')
+  }
+}
+
+// Start environment initialization
+initializeEnvironment()
+
+// Animation loop state for timestamp-based delta time
+let lastFrameTime = null
 
 // Render loop (VR-compatible using renderer.setAnimationLoop)
 function animate(timestamp) {
-  const delta = clock.getDelta()
+  // Calculate delta time from high-resolution timestamp (VR-synchronized)
+  // timestamp is in milliseconds, delta should be in seconds
+  let delta = 0
+  if (lastFrameTime !== null) {
+    delta = (timestamp - lastFrameTime) / 1000 // Convert ms to seconds
+  } else {
+    // First frame: use default 16.67ms (60fps) as fallback
+    delta = 1 / 60
+  }
+  lastFrameTime = timestamp
 
   // Record frame for performance monitoring
   performanceMonitor.recordFrame(timestamp)
 
-  // Update particle system with mouse interaction
-  particleSystem.update(delta, mousePosition)
+  // Update particle system via environment manager
+  // VR-only: No mouse/touch interaction (immersive experience)
+  environmentManager.update(delta, null)
 
   // Check performance every 60 frames
   if (performanceMonitor.shouldCheck()) {
     if (performanceMonitor.shouldReduceQuality()) {
-      particleSystem.reduceParticleCount(0.15, 100)
+      const particleSystem = environmentManager.getParticleSystem()
+      if (particleSystem) {
+        particleSystem.reduceParticleCount(0.15, 100)
+      }
     }
 
     performanceMonitor.reset()
@@ -162,19 +136,9 @@ function animate(timestamp) {
 function onWindowResize() {
   const aspect = window.innerWidth / window.innerHeight
 
-  // Update camera based on type
-  if (camera === camera2D) {
-    // OrthographicCamera: Update frustum
-    camera2D.left = (frustumSize * aspect) / -2
-    camera2D.right = (frustumSize * aspect) / 2
-    camera2D.top = frustumSize / 2
-    camera2D.bottom = frustumSize / -2
-    camera2D.updateProjectionMatrix()
-  } else {
-    // PerspectiveCamera: Update aspect ratio
-    camera3D.aspect = aspect
-    camera3D.updateProjectionMatrix()
-  }
+  // VR-only: Update PerspectiveCamera aspect ratio
+  camera.aspect = aspect
+  camera.updateProjectionMatrix()
 
   // Update renderer size
   renderer.setSize(window.innerWidth, window.innerHeight)
@@ -182,70 +146,10 @@ function onWindowResize() {
 
 window.addEventListener('resize', onWindowResize)
 
-// Mouse interaction handler
-function onMouseMove(event) {
-  // Normalize mouse coordinates to [-1, 1] (NDC)
-  const normalizedX = (event.clientX / window.innerWidth) * 2 - 1
-  const normalizedY = -(event.clientY / window.innerHeight) * 2 + 1
-
-  if (camera === camera2D) {
-    // OrthographicCamera: Convert NDC to world space using frustum
-    const worldX = normalizedX * (camera2D.right - camera2D.left) / 2
-    const worldY = normalizedY * (camera2D.top - camera2D.bottom) / 2
-    mousePosition = { x: worldX, y: worldY }
-  } else {
-    // PerspectiveCamera: Use raycaster to find intersection with XY plane
-    raycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera3D)
-    const intersection = new THREE.Vector3()
-    raycaster.ray.intersectPlane(interactionPlane, intersection)
-
-    if (intersection) {
-      mousePosition = { x: intersection.x, y: intersection.y }
-    }
-  }
-}
-
-// Touch interaction handler
-function onTouchMove(event) {
-  event.preventDefault()
-
-  // Use first touch point
-  if (event.touches.length > 0) {
-    const touch = event.touches[0]
-
-    // Normalize touch coordinates to [-1, 1] (NDC)
-    const normalizedX = (touch.clientX / window.innerWidth) * 2 - 1
-    const normalizedY = -(touch.clientY / window.innerHeight) * 2 + 1
-
-    if (camera === camera2D) {
-      // OrthographicCamera: Convert NDC to world space using frustum
-      const worldX = normalizedX * (camera2D.right - camera2D.left) / 2
-      const worldY = normalizedY * (camera2D.top - camera2D.bottom) / 2
-      mousePosition = { x: worldX, y: worldY }
-    } else {
-      // PerspectiveCamera: Use raycaster to find intersection with XY plane
-      raycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera3D)
-      const intersection = new THREE.Vector3()
-      raycaster.ray.intersectPlane(interactionPlane, intersection)
-
-      if (intersection) {
-        mousePosition = { x: intersection.x, y: intersection.y }
-      }
-    }
-  }
-}
-
-window.addEventListener('mousemove', onMouseMove)
-window.addEventListener('touchstart', onTouchMove)
-window.addEventListener('touchmove', onTouchMove)
-
 // Cleanup on page unload
 function cleanup() {
   // Remove event listeners
   window.removeEventListener('resize', onWindowResize)
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('touchstart', onTouchMove)
-  window.removeEventListener('touchmove', onTouchMove)
 
   // End VR session if active
   if (xrSession) {
@@ -253,8 +157,8 @@ function cleanup() {
     xrSession = null
   }
 
-  // Dispose Three.js resources
-  particleSystem.dispose()
+  // Dispose Three.js resources (via environment manager)
+  environmentManager.dispose()
   renderer.dispose()
 }
 

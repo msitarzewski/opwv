@@ -1,0 +1,73 @@
+id: vr-02
+title: VR-Only Migration
+phase: VR-Environments
+priority: critical
+estimated_duration: 1.75hr
+status: pending
+
+description: |
+  Remove all 2D mode infrastructure and optimize the codebase for VR-only experience.
+  This includes removing OrthographicCamera, 2D particle initialization, 2D mouse
+  interaction, and all related branching logic. Streamline the codebase for VR-first.
+
+acceptance_criteria:
+  - OrthographicCamera (camera2D) removed from codebase
+  - 2D particle initialization logic removed
+  - 2D mouse interaction (raycaster plane) removed
+  - VR detection flags simplified (assume VR-only)
+  - PerspectiveCamera (camera3D) is the only camera
+  - Bundle size reduced from removed code
+  - Clean codebase with no dead branches or legacy 2D logic
+  - All tests pass after migration
+
+tasks:
+  - Remove camera2D (OrthographicCamera) from main.js
+  - Remove 2D bounds initialization (planar bounds)
+  - Remove 2D mouse interaction (interactionPlane, NDC conversion)
+  - Simplify VR detection (remove webxrSupported branching)
+  - Update resize handler (remove 2D camera aspect ratio logic)
+  - Clean up imports and unused utilities
+  - Update particle system initialization (VR-only)
+  - Run production build and verify bundle reduction
+  - Update documentation to reflect VR-only
+
+dependencies: []
+
+technical_notes: |
+  Code to remove from src/main.js:
+  - Lines 81-90: OrthographicCamera creation (camera2D)
+  - Lines 110-128: 2D vs VR branching in particle initialization
+  - Lines 54: interactionPlane (z=0 plane for raycasting)
+  - Lines 160-161: Mouse interaction conditional (renderer.xr.isPresenting)
+  - webxrSupported detection branching (assume VR always)
+
+  PerspectiveCamera becomes the only camera:
+  - camera3D → camera (rename for clarity)
+  - Position at origin (0, 0, 0)
+  - FOV=100° for VR-appropriate wide angle
+  - No mode switching logic needed
+
+  Simplifications:
+  - Always initialize spherical particle space
+  - Always use 1000 particles (or environment-specific count)
+  - Remove VR detection warnings (VR required)
+  - Remove 2D performance targets (72fps only)
+
+  Bundle impact:
+  - Expected reduction: ~2-3 kB
+  - Remove unused OrthographicCamera code
+  - Remove conditional branching overhead
+  - Cleaner, more maintainable codebase
+
+references:
+  - src/main.js (lines 81-161, primary changes)
+  - src/particles/ParticleSystem.js (remove 2D mode detection)
+  - milestones/xr-test/02-camera-conversion.yaml (context)
+  - milestones/xr-test/05-vr-render-loop.yaml (capability-based init)
+
+deliverables:
+  - Updated src/main.js (VR-only)
+  - Updated src/particles/ParticleSystem.js (remove isSpherical checks)
+  - Reduced bundle size (verify with npm run build)
+  - Updated comments/documentation
+  - Clean git diff showing removed code

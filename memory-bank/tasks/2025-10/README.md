@@ -181,9 +181,78 @@ This month focuses on MVP development for the Organic Particle WebGL Visualizer 
 - Status: ✅ Complete (manual VR testing recommended)
 - See: [281028_xr-04-spherical-particle-space.md](./281028_xr-04-spherical-particle-space.md)
 
+### 2025-10-28: VR Rendering Loop (XR-05)
+- Replaced Clock.getDelta() with timestamp-based delta time (VR-synchronized)
+- Updated performance monitoring for VR frame rates (72fps target, 65fps minimum)
+- Changed particle initialization from URL-based to capability-based (webxrSupported)
+- Disabled mouse interaction in VR mode (immersive 3D space, not pointing)
+- VR button now works seamlessly without ?mode=vr URL parameter
+- Frame timing synchronized with VR compositor for smooth motion
+- Bundle: -0.43 kB (removed Clock dependency)
+- Status: ✅ Complete (VR tested: "That's amazing!")
+- See: [281028_xr-05-vr-render-loop.md](./281028_xr-05-vr-render-loop.md)
+
+### 2025-10-28: XR Testing and Optimization (XR-06)
+- Created comprehensive VR testing guide (TESTING-XR.md, 849 lines)
+- Documented VR performance characteristics (bundle analysis, user testing)
+- Verified 2D mode regression (no breaking changes)
+- Provided optimization recommendations (future VR enhancements)
+- Bundle: 476.64 kB (120.90 kB gzipped) - stable, no change
+- Status: ✅ Complete (XR Test milestone 100% complete - 6/6 tasks)
+- See: [281028_xr-06-testing-optimization.md](./281028_xr-06-testing-optimization.md)
+
+### 2025-10-28: VR Environments Milestone Planning (V1)
+- Created comprehensive milestone plan (8 tasks, 18-22 hours)
+- Researched Mind's Eye (1990) aesthetic for visual inspiration
+- Defined Vision Pro-style spatial UI for environment selection
+- Planned VR-only architectural shift (remove 2D mode, add landing page)
+- Designed 5-7 environments (Sphere, Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube)
+- Specified user-controlled speed system (0.25x-2.0x productivity focus)
+- Created 8 YAML task files (862 lines total specifications)
+- Updated Memory Bank (activeContext.md, progress.md)
+- Status: ✅ Complete (planning phase)
+- See: [281028_vr-v1-planning.md](./281028_vr-v1-planning.md)
+- Milestone: `milestones/vr-environments/` (8 tasks)
+
+### 2025-10-28: Environment System Architecture (VR-01)
+- Created Environment class with complete configuration schema (213 lines)
+- Created EnvironmentManager for multi-environment orchestration (168 lines)
+- Implemented sphere preset matching XR Test baseline (67 lines)
+- Extended ParticleSystem to accept Environment config (backward compatible)
+- Integrated EnvironmentManager into main.js (async initialization)
+- Dynamic preset loading via ES6 import (code splitting)
+- Bundle: 485.03 kB (123.15 kB gzipped) - +1.8% overhead
+- Code splitting: sphere preset as separate chunk (0.58 kB)
+- Zero errors, zero warnings in build
+- Status: ✅ Complete (foundation for VR-05 and VR-07)
+- See: [281028_vr-01-environment-architecture.md](./281028_vr-01-environment-architecture.md)
+
+### 2025-10-28: VR-Only Migration (VR-02)
+- Removed OrthographicCamera (camera2D) and all 2D mode infrastructure
+- Simplified to single PerspectiveCamera (renamed camera3D → camera)
+- Removed mouse/touch interaction (VR immersive only, no pointing)
+- Removed mode detection branching (isSpherical checks in ParticleSystem)
+- Simplified VR detection and performance targets (always 72fps)
+- Modified src/main.js (220 lines, -112 lines, -33.7%)
+- Modified src/particles/ParticleSystem.js (simplified behavior logic)
+- Bundle: 481.54 kB (121.97 kB gzipped) - **-3.49 kB reduction (-0.7%)**
+- Zero errors, zero warnings in build
+- Status: ✅ Complete (VR-first architecture established)
+- See: [281028_vr-02-vr-only-migration.md](./281028_vr-02-vr-only-migration.md)
+
 ## Tasks In Progress
 
-None - MVP Development 100% Complete, XR Test XR-01, XR-02, XR-03, XR-04 Complete
+### VR Environments Milestone (2/8 Tasks Complete)
+- ✅ VR-01: Environment System Architecture (2.5hr) - **COMPLETE**
+- ✅ VR-02: VR-Only Migration (1.75hr) - **COMPLETE**
+- ⏳ VR-03: Spatial UI Framework (3.5hr)
+- ⏳ VR-04: Speed Control System (1.75hr)
+- ⏳ VR-05: Environment Presets (4.5hr)
+- ⏳ VR-06: Landing Page (1.25hr)
+- ⏳ VR-07: Environment Transitions (2.25hr)
+- ⏳ VR-08: Testing and Optimization (2.75hr)
+
+Ready for VR-03 (Spatial UI Framework) or VR-05 (Environment Presets)
 
 ## Tasks Completed (Summary)
 
@@ -202,22 +271,36 @@ None - MVP Development 100% Complete, XR Test XR-01, XR-02, XR-03, XR-04 Complet
 ### Post-MVP Infrastructure
 - ✅ Git and GitHub repository setup (version control + public release)
 
-### XR Test Milestone (In Progress - 4/6 Tasks Complete)
+### XR Test Milestone (100% - All 6 Tasks Complete)
 - ✅ XR-01: WebXR Setup and Dependencies (WebXR detection, VR button, URL parameter)
 - ✅ XR-02: Camera System Conversion (Dual camera, PerspectiveCamera, raycaster interaction)
 - ✅ XR-03: WebXR Session Management (VR sessions, setAnimationLoop, reference space)
 - ✅ XR-04: 360° Spherical Particle Space (3D spherical distribution, 1000 particles, radius 5-20)
+- ✅ XR-05: VR Rendering Loop (Timestamp-based delta, 72fps target, capability-based init, VR-tested)
+- ✅ XR-06: Testing and Optimization (TESTING-XR.md, performance docs, 2D regression verification)
+
+### VR Environments Milestone Planning (100% - V1 Planning Complete)
+- ✅ Milestone planning complete (8 tasks defined, 18-22 hours)
 
 ## Tasks Upcoming
 
-**V1 Phase** (Future):
-- Multi-mode animation support
-- UI controls and settings panel
-- Advanced color/theme presets
-- Performance enhancements
-- Automated testing infrastructure
+**VR Environments Milestone** (V1 Release - Ready to Begin):
+- VR-01: Environment System Architecture (2.5hr)
+- VR-02: VR-Only Migration (1.75hr)
+- VR-03: Spatial UI Framework (3.5hr)
+- VR-04: Speed Control System (1.75hr)
+- VR-05: Environment Presets - 5-7 environments (4.5hr)
+  - Sphere, Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube
+  - Mind's Eye aesthetic (90's psychedelic, abstract, mathematical)
+- VR-06: Landing Page (1.25hr)
+- VR-07: Environment Transitions (2.25hr)
+- VR-08: Testing and Optimization (2.75hr)
 
-(Tasks will be created when V1 phase begins)
+**Features**:
+- Vision Pro-style spatial UI (floating cards in VR)
+- User-controlled speed (0.25x-2.0x productivity focus)
+- VR-only experience (remove 2D mode, add landing page)
+- Apple-quality transitions and polish
 
 ## Key Decisions This Month
 - 2025-10-25: Three.js for WebGL rendering

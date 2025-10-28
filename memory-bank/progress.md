@@ -1,8 +1,8 @@
 # Progress
 
-**Last Updated**: 2025-10-26
-**Project Status**: MVP Complete - Ready for Production
-**Phase**: MVP (100% complete - ALL 10 TASKS DONE)
+**Last Updated**: 2025-10-28
+**Project Status**: VR Environments In Progress (2/8 tasks complete)
+**Phase**: VR Environments (VR-01, VR-02 complete, VR-first architecture established)
 
 ## Current Status - MVP COMPLETE ✅
 
@@ -94,7 +94,7 @@
   - Published to GitHub: https://github.com/msitarzewski/opwv (public)
   - Repository now version-controlled and publicly accessible
 
-### XR Test Milestone (In Progress)
+### XR Test Milestone (Complete - 2025-10-28)
 - ✅ **XR-01: WebXR Setup and Dependencies** (2025-10-26)
   - Created WebXR detection utilities (src/utils/webxr.js - 72 lines)
   - Implemented VR mode URL parameter parsing (?mode=vr)
@@ -128,26 +128,65 @@
   - Zero breaking changes to 2D mode (setAnimationLoop backward compatible)
   - Bundle impact: +0.99 kB (+0.2% overhead)
 
+- ✅ **XR-04: 360° Spherical Particle Space** (2025-10-28)
+  - Adapted particle system from 2D planar to 3D spherical space
+  - Spherical initialization using (r, θ, φ) coordinates
+  - 3D noise field support with get3D() method
+  - Spherical boundary wrapping (opposite-side teleport)
+  - VR mode: 1000 particles in spherical shell (radius 5-20 units)
+  - 2D mode: 500 particles in planar space (backward compatible)
+  - Mode detection via bounds properties (no explicit flags)
+  - Bundle impact: +5.28 kB (+1.1% overhead)
+
+- ✅ **XR-05: VR Rendering Loop** (2025-10-28)
+  - Replaced Clock.getDelta() with timestamp-based delta time
+  - VR performance targets (72fps target, 65fps minimum)
+  - Capability-based initialization (webxrSupported flag)
+  - Disabled mouse interaction in VR mode (immersive 3D space)
+  - VR button works seamlessly without URL parameter
+  - Frame timing synchronized with VR compositor
+  - Bundle impact: -0.43 kB (removed Clock dependency)
+  - User testing: "What?! That's amazing!" ✨
+
+- ✅ **XR-06: Testing and Optimization** (2025-10-28)
+  - Created TESTING-XR.md (849 lines, comprehensive VR testing guide)
+  - Documented VR performance characteristics
+  - Verified 2D mode regression (no breaking changes)
+  - User testing results documented
+  - Bundle: 476.64 kB (120.90 kB gzipped) - stable
+  - XR Test milestone 100% complete (6/6 tasks)
+
 ## In Progress
-- ⏳ **XR Test Milestone** (3/6 tasks complete)
-  - ✅ XR-01: WebXR Setup and Dependencies
-  - ✅ XR-02: Camera Conversion (OrthographicCamera → PerspectiveCamera)
-  - ✅ XR-03: WebXR Session Management
-  - ⏳ XR-04: Spherical Particle Space
-  - ⏳ XR-05: VR Render Loop
-  - ⏳ XR-06: Testing and Optimization
+- ⏳ **VR Environments Milestone** (2/8 tasks complete - 4.25hr spent)
+  - ✅ VR-01: Environment System Architecture (COMPLETE)
+    - Environment class with configuration schema (213 lines)
+    - EnvironmentManager for multi-environment orchestration (168 lines)
+    - Sphere preset matching XR Test baseline (67 lines)
+    - ParticleSystem extended (backward compatible)
+    - Bundle: 485.03 kB (123.15 kB gzipped) - +1.8% overhead
+  - ✅ VR-02: VR-Only Migration (COMPLETE)
+    - Removed OrthographicCamera and all 2D mode infrastructure
+    - Single PerspectiveCamera (renamed camera3D → camera)
+    - Removed mouse/touch interaction (VR immersive only)
+    - Simplified mode detection (no branching)
+    - Bundle: 481.54 kB (121.97 kB gzipped) - **-3.49 kB reduction (-0.7%)**
+  - Ready for VR-03 (Spatial UI Framework) or VR-05 (Environment Presets)
+  - Estimated remaining: 13.75-17.75 hours
 
 ## Upcoming Milestones
-- **XR Test (IN PROGRESS)**: WebXR 360° immersive viewing mode
-  - 6 tasks total: 3 complete (XR-01, XR-02, XR-03), 3 remaining
-  - Estimated remaining: ~4.5 hours (~0.5 day)
-  - Goal: Proof of concept for VR viewing with camera at center of particle space
-  - No interaction in test phase
-- **Production Deployment**: Deploy MVP to GitHub Pages (static hosting)
+- **VR Environments (PLANNED - V1 Release)**: Multiple spatial environments with Vision Pro UI
+  - 8 tasks total: VR-01 through VR-08
+  - Estimated: 18-22 hours (~3-4 days)
+  - Vision Pro-style spatial UI for environment selection
+  - 5-7 environments (Sphere, Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube)
+  - Mind's Eye aesthetic (90's psychedelic, abstract, mathematical)
+  - User-controlled speed (0.25x-2.0x productivity focus)
+  - VR-only experience (remove 2D mode, add landing page)
+  - Apple-quality transitions and polish
+- **Production Deployment**: Deploy V1 to GitHub Pages or static hosting
   - Enable GitHub Pages in repository settings
   - Deploy dist/ folder to gh-pages branch
   - Configure custom domain (optional)
-- **V1 Planning**: Define V1 features (multi-mode, UI controls, themes)
 
 ## Technical Achievements
 - 60fps baseline with Three.js OrthographicCamera
