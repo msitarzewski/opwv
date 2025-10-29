@@ -283,21 +283,46 @@ This month focuses on MVP development for the Organic Particle WebGL Visualizer 
 - Status: ✅ Complete (Functional - Visual Polish Needed)
 - See: [281028_vr-04-speed-control.md](./281028_vr-04-speed-control.md)
 
+### 2025-10-29: Environment Presets (VR-05)
+- Redesigned behavior system with 7 unique physics modes (not just flocking tuning)
+- Created 6 behavior modules (366 lines): brownian, orbital, spring, flow, wave, rotation
+- Created 6 new environment presets (714 lines): Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube
+- Extended Environment schema: behavior.mode, behavior.modeParams, visual.renderMode
+- Refactored ParticleSystem with mode dispatcher (switch statement for 7 modes)
+- Implemented UIToggleOrb (225 lines) - floating toggle button for clean immersive UX
+- Updated all 7 presets with behavior modes and visual configurations
+- Parallel environment loading (Promise.all for faster startup)
+- Each environment has unique physics:
+  - Sphere: Classic flocking (baseline)
+  - Nebula: Brownian motion (random walk, large glowing particles)
+  - Galaxy: Orbital mechanics (Newtonian gravity, F=GMm/r²)
+  - Lattice: Spring physics (Hooke's law, 9×9×9 grid breathing)
+  - Vortex: Flow field (centripetal tornado with upward spiral)
+  - Ocean: Wave equation (sine wave propagation on plane)
+  - Hypercube: 4D rotation (tesseract projection, rainbow spectrum)
+- UI starts hidden on VR entry, toggle orb positioned at (0, -3.5, -5.0)
+- Orb: 10cm visual + 35cm hit sphere, stationary in world space
+- Bundle: 617.72 kB (158.13 kB gzipped) - +7.64 kB (+1.3%)
+- Zero errors, zero warnings
+- Vision Pro tested: All environments load, distinct behaviors, orb toggle works
+- Status: ✅ Complete (7 diverse environments with unique physics)
+- See: [291029_vr-05-environment-presets.md](./291029_vr-05-environment-presets.md)
+
 ## Tasks In Progress
 
-### VR Environments Milestone (4/8 Tasks Complete)
+### VR Environments Milestone (5/8 Tasks Complete)
 - ✅ VR-01: Environment System Architecture (2.5hr) - **COMPLETE**
 - ✅ VR-02: VR-Only Migration (1.75hr) - **COMPLETE**
 - ✅ VR-03: Spatial UI Framework (3.5hr) - **COMPLETE**
 - ✅ VR-04: Speed Control System (2.0hr) - **COMPLETE** (Visual Polish Needed)
-- ⏳ VR-05: Environment Presets (4.5hr)
+- ✅ VR-05: Environment Presets (6.0hr) - **COMPLETE** (7 unique physics systems + UI toggle orb)
 - ⏳ VR-06: Landing Page (1.25hr)
 - ⏳ VR-07: Environment Transitions (2.25hr)
 - ⏳ VR-08: Testing and Optimization (2.75hr)
 
-**Progress**: 4/8 tasks (50%) | **Time spent**: 9.75hr | **Estimated remaining**: 8.5-11.75hr
+**Progress**: 5/8 tasks (62.5%) | **Time spent**: 15.75hr | **Estimated remaining**: 6.25hr
 
-Ready for VR-05 (Environment Presets)
+Ready for VR-06 (Landing Page) or VR-07 (Environment Transitions)
 
 ## Tasks Completed (Summary)
 

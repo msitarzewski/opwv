@@ -7,6 +7,7 @@ import { GazeController } from './GazeController.js'
 import { ControllerInput } from './ControllerInput.js'
 import { SpeedControlPanel } from './SpeedControlPanel.js'
 import { GazeCursor } from './GazeCursor.js'
+import { UIToggleOrb } from './UIToggleOrb.js'
 
 /**
  * SpatialUI class - Manages VR spatial UI for environment selection
@@ -69,6 +70,11 @@ export class SpatialUI {
       size: 0.02
     })
     this.uiGroup.add(this.gazeCursor.getMesh())
+
+    // UI Toggle Orb (always visible, stationary in world space)
+    this.toggleOrb = new UIToggleOrb(() => this.toggle())
+    this.toggleOrb.setPosition(new THREE.Vector3(0, -3.5, -5.0)) // Further down and back (out of peripheral vision)
+    this.scene.add(this.toggleOrb.getMesh()) // Add to scene, NOT uiGroup (always visible)
 
     // Set selection callbacks
     this.gazeController.setOnSelect((event) => this.onSelection(event))
@@ -237,6 +243,9 @@ export class SpatialUI {
       this.gazeController.setEnabled(true)
       this.controllerInput.setEnabled(true)
 
+      // Update toggle orb visual state
+      this.toggleOrb.setUIVisible(true)
+
       // Refresh UI (in case environments changed)
       this.initializeUI()
 
@@ -252,13 +261,14 @@ export class SpatialUI {
       this.visible = false
       this.uiGroup.visible = false
 
-      // Disable input controllers
+      // Disable input controllers (but keep orb interactive)
       this.gazeController.setEnabled(false)
       this.controllerInput.setEnabled(false)
 
-      // Debug: Log stack trace to see who called hide()
-      console.log('SpatialUI hidden - called from:')
-      console.trace()
+      // Update toggle orb visual state
+      this.toggleOrb.setUIVisible(false)
+
+      console.log('SpatialUI hidden - toggle orb remains visible')
     }
   }
 
@@ -279,6 +289,13 @@ export class SpatialUI {
    * @param {number} delta - Time elapsed since last frame (seconds)
    */
   update(xrSession, delta) {
+    // ALWAYS update toggle orb (visible even when UI is hidden)
+    this.toggleOrb.update(this.camera)
+
+    // ALWAYS check orb interaction (regardless of UI visibility)
+    this.updateOrbInteraction(xrSession, delta)
+
+    // Early return if UI panels are hidden (skip card/panel updates)
     if (!this.visible) {
       return
     }
@@ -311,6 +328,48 @@ export class SpatialUI {
 
     // Handle speed panel interactions
     this.handleSpeedPanelInteractions()
+  }
+
+  /**
+   * Update toggle orb interaction (always active)
+   * @param {XRSession|null} xrSession - Active XR session
+   * @param {number} delta - Time delta
+   */
+  updateOrbInteraction(xrSession, delta) {
+    // Raycast against orb's invisible hit sphere (larger for easier targeting)
+    const orbMeshes = [this.toggleOrb.getMesh()]
+
+    // Raycast from camera (gaze)
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+
+    // Raycast with recursive=true to hit child objects (hit sphere)
+    const intersects = raycaster.intersectObjects(orbMeshes, true)
+
+    if (intersects.length > 0) {
+      // Hovering over orb
+      this.toggleOrb.setHovered(true)
+
+      // Accumulate dwell time
+      if (!this.orbDwellTimer) this.orbDwellTimer = 0
+      this.orbDwellTimer += delta
+
+      const dwellProgress = Math.min(1.0, this.orbDwellTimer / 0.8)
+      this.toggleOrb.setDwellProgress(dwellProgress)
+
+      // Trigger toggle after 0.8s
+      if (this.orbDwellTimer >= 0.8) {
+        this.toggleOrb.trigger()
+        this.orbDwellTimer = 0
+      }
+    } else {
+      // Not hovering
+      this.toggleOrb.setHovered(false)
+      this.toggleOrb.setDwellProgress(0)
+      this.orbDwellTimer = 0
+    }
+
+    // TODO: Add controller input for orb (pinch to toggle)
   }
 
   /**
@@ -359,6 +418,13 @@ export class SpatialUI {
       this.uiGroup.remove(this.gazeCursor.getMesh())
       this.gazeCursor.dispose()
       this.gazeCursor = null
+    }
+
+    // Dispose toggle orb
+    if (this.toggleOrb) {
+      this.scene.remove(this.toggleOrb.getMesh())
+      this.toggleOrb.dispose()
+      this.toggleOrb = null
     }
 
     // Dispose speed panel

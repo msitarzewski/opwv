@@ -32,6 +32,7 @@ const sphereEnvironment = {
 
   // Behavior parameters (from ParticleSystem.js:25-35)
   behavior: {
+    mode: 'flocking',         // Classic flocking behavior (baseline)
     cohesionRadius: 2.0,      // Particles group within 2 units
     cohesionWeight: 0.05,     // Subtle cohesion force
     alignmentRadius: 2.0,     // Velocity alignment within 2 units
@@ -45,6 +46,7 @@ const sphereEnvironment = {
 
   // Visual aesthetics (from ParticleSystem.js:80-86)
   visual: {
+    renderMode: 'points',     // Standard point particles (baseline)
     colorPalette: null,       // null = use generatePalette (seeded random colors)
     particleSize: 3,          // Base size in pixels
     opacity: 0.8,             // 80% opacity

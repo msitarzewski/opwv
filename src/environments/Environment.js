@@ -56,8 +56,11 @@ export class Environment {
       initializationFn: config.spatial.initializationFn || null
     }
 
-    // Behavior parameters (flocking + noise)
+    // Behavior parameters
     this.behavior = {
+      mode: config.behavior.mode || 'flocking', // 'flocking' | 'orbital' | 'spring' | 'wave' | 'flow' | 'rotation' | 'brownian'
+
+      // Flocking parameters (mode: 'flocking')
       cohesionRadius: config.behavior.cohesionRadius,
       cohesionWeight: config.behavior.cohesionWeight,
       alignmentRadius: config.behavior.alignmentRadius,
@@ -66,15 +69,23 @@ export class Environment {
       separationWeight: config.behavior.separationWeight,
       maxSpeed: config.behavior.maxSpeed,
       noiseScale: config.behavior.noiseScale,
-      noiseStrength: config.behavior.noiseStrength
+      noiseStrength: config.behavior.noiseStrength,
+
+      // Mode-specific parameters (optional, mode-dependent)
+      modeParams: config.behavior.modeParams || {}
     }
 
     // Visual aesthetics
     this.visual = {
+      renderMode: config.visual.renderMode || 'points', // 'points' | 'spheres' | 'trails' | 'mesh'
       colorPalette: config.visual.colorPalette || null,
       particleSize: config.visual.particleSize,
       opacity: config.visual.opacity,
-      sizeAttenuation: config.visual.sizeAttenuation
+      sizeAttenuation: config.visual.sizeAttenuation,
+
+      // Render mode specific parameters
+      emissive: config.visual.emissive || null,  // Emissive color for glowing spheres
+      emissiveIntensity: config.visual.emissiveIntensity || 0.5 // Glow strength
     }
 
     // Performance targets

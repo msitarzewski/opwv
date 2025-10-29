@@ -120,8 +120,24 @@ const spatialUI = new SpatialUI(scene, camera, renderer, environmentManager, spe
 // Async initialization function (avoids top-level await)
 async function initializeEnvironment() {
   try {
-    // Switch to sphere preset (baseline environment)
-    // Note: switchEnvironment handles loading, setting current, and initialization
+    // VR-05: Pre-load all environment presets for spatial UI selection
+    // Load all 7 environments in parallel for fast switching
+    console.log('Loading environment presets...')
+
+    await Promise.all([
+      environmentManager.loadPreset('sphere'),
+      environmentManager.loadPreset('nebula'),
+      environmentManager.loadPreset('galaxy'),
+      environmentManager.loadPreset('lattice'),
+      environmentManager.loadPreset('vortex'),
+      environmentManager.loadPreset('ocean'),
+      environmentManager.loadPreset('hypercube')
+    ])
+
+    console.log('All environment presets loaded (7 total)')
+
+    // Switch to sphere preset (baseline environment as default)
+    // Note: switchEnvironment handles setting current and initializing particle system
     await environmentManager.switchEnvironment('sphere')
 
     console.log('Environment initialized successfully')
@@ -264,9 +280,9 @@ if (vrButton && webxrSupported) {
             console.log('Session mode:', session.mode)
             console.log('Session features:', session.enabledFeatures)
 
-            // Show spatial UI automatically when entering VR
-            spatialUI.show()
-            console.log('Spatial UI shown automatically in VR')
+            // UI starts hidden - user can look down at toggle orb to reveal UI
+            spatialUI.hide()
+            console.log('VR session active - look down for UI toggle orb')
           } else {
             console.error('Failed to start VR session')
             alert('Unable to start VR session. Make sure a VR headset is connected.')

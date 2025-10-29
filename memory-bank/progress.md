@@ -157,7 +157,7 @@
   - XR Test milestone 100% complete (6/6 tasks)
 
 ## In Progress
-- ⏳ **VR Environments Milestone** (4/8 tasks complete - 9.75hr spent)
+- ⏳ **VR Environments Milestone** (5/8 tasks complete - 15.75hr spent)
   - ✅ VR-01: Environment System Architecture (COMPLETE)
     - Environment class with configuration schema (213 lines)
     - EnvironmentManager for multi-environment orchestration (168 lines)
@@ -189,8 +189,19 @@
     - localStorage persistence across sessions
     - Bundle: 610.08 kB (156.21 kB gzipped) - +10.95 kB (+1.8%)
     - Functional but has visual rendering artifacts
-  - Ready for VR-05 (Environment Presets)
-  - Estimated remaining: 8.5-11.75 hours
+  - ✅ VR-05: Environment Presets (COMPLETE - 7 Unique Physics Systems)
+    - 6 behavior modules (366 lines): brownian, orbital, spring, flow, wave, rotation
+    - 6 new presets (714 lines): Nebula, Galaxy, Lattice, Vortex, Ocean, Hypercube
+    - UIToggleOrb (225 lines) - floating UI toggle, stationary in world space
+    - Extended Environment schema (behavior.mode, visual.renderMode)
+    - Refactored ParticleSystem with multi-mode dispatcher
+    - Parallel loading (Promise.all for all 7 environments)
+    - Diverse behaviors: Flocking, Brownian, Orbital, Spring, Flow, Wave, 4D Rotation
+    - UI auto-hide on VR entry (look down at orb to reveal)
+    - Bundle: 617.72 kB (158.13 kB gzipped) - +7.64 kB (+1.3%)
+    - Vision Pro tested: All 7 environments distinct and functional
+  - Ready for VR-06 (Landing Page) or VR-07 (Environment Transitions)
+  - Estimated remaining: 6.25 hours
 
 ## Upcoming Milestones
 - **VR Environments (PLANNED - V1 Release)**: Multiple spatial environments with Vision Pro UI

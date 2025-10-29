@@ -6,6 +6,14 @@ import { NoiseField } from '../utils/noise.js'
 import { generatePalette } from '../utils/colors.js'
 import { Environment } from '../environments/Environment.js'
 
+// Behavior modules for different environment modes
+import { applyBrownianMotion } from './behaviors/brownian.js'
+import { applyOrbitalMechanics } from './behaviors/orbital.js'
+import { applySpringForce } from './behaviors/spring.js'
+import { applyFlowField } from './behaviors/flow.js'
+import { applyWaveMotion } from './behaviors/wave.js'
+import { apply4DRotation } from './behaviors/rotation.js'
+
 export class ParticleSystem {
   /**
    * Create a particle system with N particles
@@ -82,8 +90,36 @@ export class ParticleSystem {
     }
 
     // Create particle instances
-    for (let i = 0; i < this.count; i++) {
-      this.particles.push(new Particle(this.bounds, this.rng, this.palette))
+    // Check if environment provides custom initialization function
+    const useCustomInit = this.environment && this.environment.spatial.initializationFn
+
+    if (useCustomInit) {
+      // Custom initialization path - call initializationFn for each particle
+      for (let i = 0; i < this.count; i++) {
+        const customProps = this.environment.spatial.initializationFn(this.rng, this.palette, this.bounds)
+
+        // Create particle-like object with custom properties
+        // Must have: position (Vector3), velocity (Vector3), color (Color), size (number)
+        const particle = {
+          position: customProps.position,
+          velocity: customProps.velocity,
+          color: customProps.color,
+          size: customProps.size,
+          // Include update method from Particle class
+          update: function(delta) {
+            this.position.x += this.velocity.x * delta
+            this.position.y += this.velocity.y * delta
+            this.position.z += this.velocity.z * delta
+          }
+        }
+
+        this.particles.push(particle)
+      }
+    } else {
+      // Default initialization path - use Particle constructor
+      for (let i = 0; i < this.count; i++) {
+        this.particles.push(new Particle(this.bounds, this.rng, this.palette))
+      }
     }
 
     // Create BufferGeometry for efficient rendering
@@ -165,11 +201,61 @@ export class ParticleSystem {
   }
 
   /**
-   * Apply organic motion behaviors to a particle
+   * Apply motion behaviors to a particle (mode-aware)
+   * @param {Particle} particle - The particle to apply behaviors to
+   * @param {Object} mousePosition - {x, y} in world coordinates (or null)
+   * @param {number} delta - Time delta for behavior calculations
+   */
+  applyBehaviors(particle, mousePosition, delta) {
+    // Get behavior mode from environment (default: 'flocking')
+    const mode = this.environment ? this.environment.behavior.mode : 'flocking'
+    const modeParams = this.environment ? this.environment.behavior.modeParams : {}
+
+    // Apply behavior based on mode
+    switch (mode) {
+      case 'flocking':
+        this.applyFlockingBehavior(particle, mousePosition)
+        break
+
+      case 'brownian':
+        applyBrownianMotion(particle, modeParams, delta)
+        break
+
+      case 'orbital':
+        applyOrbitalMechanics(particle, modeParams, delta)
+        break
+
+      case 'spring':
+        applySpringForce(particle, modeParams, delta)
+        break
+
+      case 'flow':
+        applyFlowField(particle, modeParams, delta)
+        break
+
+      case 'wave':
+        applyWaveMotion(particle, modeParams, this.time, delta)
+        break
+
+      case 'rotation':
+        apply4DRotation(particle, modeParams, delta)
+        break
+
+      default:
+        console.warn(`Unknown behavior mode: ${mode}, falling back to flocking`)
+        this.applyFlockingBehavior(particle, mousePosition)
+    }
+
+    // Boundary wrapping (always apply for VR spherical space)
+    wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
+  }
+
+  /**
+   * Apply flocking behavior (original behavior)
    * @param {Particle} particle - The particle to apply behaviors to
    * @param {Object} mousePosition - {x, y} in world coordinates (or null)
    */
-  applyBehaviors(particle, mousePosition) {
+  applyFlockingBehavior(particle, mousePosition) {
     // Find neighbors for flocking behaviors
     const cohesionNeighbors = this.findNeighbors(particle, this.config.cohesionRadius)
     const alignmentNeighbors = this.findNeighbors(particle, this.config.alignmentRadius)
@@ -180,7 +266,7 @@ export class ParticleSystem {
     const alignment = calculateAlignment(particle, alignmentNeighbors, this.config.alignmentWeight)
     const separation = calculateSeparation(particle, separationNeighbors, this.config.separationRadius, this.config.separationWeight)
 
-    // VR-only: Always use 3D noise for spherical space
+    // 3D noise for spherical space
     const noise = this.noiseField.get3D(particle.position.x, particle.position.y, particle.position.z, this.time)
     const noiseForce = new THREE.Vector3(noise.x, noise.y, noise.z)
 
@@ -198,9 +284,6 @@ export class ParticleSystem {
     if (particle.velocity.length() > this.config.maxSpeed) {
       particle.velocity.normalize().multiplyScalar(this.config.maxSpeed)
     }
-
-    // VR-only: Always use spherical boundary wrapping
-    wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
   }
 
   /**
@@ -218,8 +301,8 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const particle = this.particles[i]
 
-      // Apply organic motion behaviors (including user interaction)
-      this.applyBehaviors(particle, mousePosition)
+      // Apply motion behaviors (mode-aware)
+      this.applyBehaviors(particle, mousePosition, delta)
 
       // Update position based on velocity
       particle.update(delta)
