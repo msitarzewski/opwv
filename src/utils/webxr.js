@@ -90,8 +90,9 @@ export async function requestVRSession(renderer) {
 
   try {
     // Request immersive VR session with optional features
+    // hand-tracking: Required for Vision Pro natural input (pinch gestures)
     const session = await navigator.xr.requestSession('immersive-vr', {
-      optionalFeatures: ['local-floor', 'bounded-floor']
+      optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
     })
 
     // Connect session to Three.js WebXRManager

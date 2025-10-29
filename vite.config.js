@@ -4,7 +4,9 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   server: {
     port: 3000,
-    open: true
+    open: true,
+    host: true, // Allow external connections
+    allowedHosts: ['localhost', '127.0.0.1', 'serenity.ngrok.app']
     // Note: Safari requires HTTPS for WebXR
     // For production, deploy to HTTPS hosting
     // For local testing, consider using ngrok or similar tunneling service

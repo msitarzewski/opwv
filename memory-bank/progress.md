@@ -157,7 +157,7 @@
   - XR Test milestone 100% complete (6/6 tasks)
 
 ## In Progress
-- ⏳ **VR Environments Milestone** (2/8 tasks complete - 4.25hr spent)
+- ⏳ **VR Environments Milestone** (3/8 tasks complete - 7.75hr spent)
   - ✅ VR-01: Environment System Architecture (COMPLETE)
     - Environment class with configuration schema (213 lines)
     - EnvironmentManager for multi-environment orchestration (168 lines)
@@ -170,8 +170,18 @@
     - Removed mouse/touch interaction (VR immersive only)
     - Simplified mode detection (no branching)
     - Bundle: 481.54 kB (121.97 kB gzipped) - **-3.49 kB reduction (-0.7%)**
-  - Ready for VR-03 (Spatial UI Framework) or VR-05 (Environment Presets)
-  - Estimated remaining: 13.75-17.75 hours
+  - ✅ VR-03: Spatial UI Framework (COMPLETE)
+    - Vision Pro hand tracking with XRHandModelFactory (mesh rendering)
+    - Spatial UI with 4 components (1044 lines total)
+    - Gaze-based selection (0.8s dwell timer, progress bar)
+    - Controller/hand input (4 sources for Vision Pro transient-pointer)
+    - Canvas-based glassmorphic cards (512×683px resolution)
+    - Auto-show on VR entry, UI persistence after selection
+    - Lighting added (ambient + directional for hand visibility)
+    - Bundle: 599.13 kB (153.98 kB gzipped) - +117.59 kB (+24.4%)
+    - Vision Pro tested and approved
+  - Ready for VR-04 (Speed Control) or VR-05 (Environment Presets)
+  - Estimated remaining: 10-14 hours
 
 ## Upcoming Milestones
 - **VR Environments (PLANNED - V1 Release)**: Multiple spatial environments with Vision Pro UI

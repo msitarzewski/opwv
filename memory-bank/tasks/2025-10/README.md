@@ -240,19 +240,42 @@ This month focuses on MVP development for the Organic Particle WebGL Visualizer 
 - Status: ✅ Complete (VR-first architecture established)
 - See: [281028_vr-02-vr-only-migration.md](./281028_vr-02-vr-only-migration.md)
 
+### 2025-10-28: Spatial UI Framework (VR-03)
+- Created Vision Pro-style spatial UI with floating glassmorphic cards
+- Implemented EnvironmentCard (270 lines) - canvas-based rendering with progress bar
+- Implemented GazeController (180 lines) - camera raycasting with 0.8s dwell timer
+- Implemented ControllerInput (311 lines) - WebXR hand/controller support, haptic feedback
+- Implemented SpatialUI (283 lines) - arc layout manager, dual input coordination
+- Added Vision Pro hand tracking with XRHandModelFactory (mesh rendering)
+- Added lighting (ambient + directional) for hand visibility
+- Added hand-tracking to WebXR session features
+- Extended controller support to 4 inputs (Vision Pro transient-pointer at indices 2-3)
+- Auto-show UI on VR entry, auto-hide on exit
+- UI persistence (stays visible after selection for environment browsing)
+- Modified src/main.js (+38 lines) - integration, hands, lighting, auto-show
+- Fixed ParticleSystem.js variable scope bug (count → this.count)
+- Configured ngrok support (vite.config.js allowedHosts)
+- Bundle: 599.13 kB (153.98 kB gzipped) - +117.59 kB (+24.4% for hand models + UI)
+- Zero errors, zero warnings (chunk size warning acceptable)
+- Vision Pro tested: Hands visible, gaze selection working, UI persistent
+- Status: ✅ Complete (Vision Pro spatial UI fully functional)
+- See: [281028_vr-03-spatial-ui-framework.md](./281028_vr-03-spatial-ui-framework.md)
+
 ## Tasks In Progress
 
-### VR Environments Milestone (2/8 Tasks Complete)
+### VR Environments Milestone (3/8 Tasks Complete)
 - ✅ VR-01: Environment System Architecture (2.5hr) - **COMPLETE**
 - ✅ VR-02: VR-Only Migration (1.75hr) - **COMPLETE**
-- ⏳ VR-03: Spatial UI Framework (3.5hr)
+- ✅ VR-03: Spatial UI Framework (3.5hr) - **COMPLETE**
 - ⏳ VR-04: Speed Control System (1.75hr)
 - ⏳ VR-05: Environment Presets (4.5hr)
 - ⏳ VR-06: Landing Page (1.25hr)
 - ⏳ VR-07: Environment Transitions (2.25hr)
 - ⏳ VR-08: Testing and Optimization (2.75hr)
 
-Ready for VR-03 (Spatial UI Framework) or VR-05 (Environment Presets)
+**Progress**: 3/8 tasks (37.5%) | **Time spent**: 7.75hr | **Estimated remaining**: 10-14hr
+
+Ready for VR-04 (Speed Control) or VR-05 (Environment Presets)
 
 ## Tasks Completed (Summary)
 

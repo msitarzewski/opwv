@@ -91,14 +91,14 @@ export class ParticleSystem {
 
     // Position buffer (Float32Array for performance)
     // Each particle has 3 values: x, y, z
-    const positions = new Float32Array(count * 3)
+    const positions = new Float32Array(this.count * 3)
 
     // Color buffer (Float32Array)
     // Each particle has 3 values: r, g, b (0-1 range)
-    const colors = new Float32Array(count * 3)
+    const colors = new Float32Array(this.count * 3)
 
     // Initialize buffers from particle data
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < this.count; i++) {
       const particle = this.particles[i]
       const i3 = i * 3
 

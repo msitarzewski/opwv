@@ -2,8 +2,10 @@
 // Entry point
 
 import * as THREE from 'three'
+import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js'
 import { ParticleSystem } from './particles/ParticleSystem.js'
 import { EnvironmentManager } from './environments/EnvironmentManager.js'
+import { SpatialUI } from './ui/SpatialUI.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
 import { isWebXRSupported, isVRSessionSupported, requestVRSession, endVRSession } from './utils/webxr.js'
@@ -52,6 +54,16 @@ if (webxrSupported) {
 // Create scene
 const scene = new THREE.Scene()
 
+// Add lighting for hand visibility (hands are black meshes without light)
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8)
+scene.add(ambientLight)
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
+directionalLight.position.set(1, 1, 1)
+scene.add(directionalLight)
+
+console.log('Lighting added for hand visibility')
+
 // VR-only: PerspectiveCamera for immersive 360° viewing
 const aspect = window.innerWidth / window.innerHeight
 const camera = new THREE.PerspectiveCamera(
@@ -61,6 +73,26 @@ const camera = new THREE.PerspectiveCamera(
   1000                           // far (encompass entire particle space)
 )
 camera.position.set(0, 0, 0)     // Center of particle space for 360° viewing
+
+// Hand tracking setup for VR (Vision Pro, Quest, etc.)
+try {
+  // Create hand model factory
+  const handModelFactory = new XRHandModelFactory()
+
+  // Get hand references from renderer (will be available when VR session starts)
+  const hand1 = renderer.xr.getHand(0)
+  hand1.add(handModelFactory.createHandModel(hand1, 'mesh'))
+  scene.add(hand1)
+
+  const hand2 = renderer.xr.getHand(1)
+  hand2.add(handModelFactory.createHandModel(hand2, 'mesh'))
+  scene.add(hand2)
+
+  console.log('Hand tracking initialized successfully')
+} catch (error) {
+  console.error('Failed to initialize hand tracking:', error)
+  console.log('App will continue without hand models')
+}
 
 // Initialize Environment Manager
 // VR-01: Environment-based architecture (sphere preset as baseline)
@@ -73,15 +105,16 @@ const performanceMonitor = new PerformanceMonitor({
   minFPS: 65
 })
 
+// Initialize Spatial UI for VR environment selection
+// VR-03: Vision Pro-style floating cards with gaze and controller selection
+const spatialUI = new SpatialUI(scene, camera, renderer, environmentManager)
+
 // Async initialization function (avoids top-level await)
 async function initializeEnvironment() {
   try {
-    // Load sphere preset asynchronously
-    // Note: This is the baseline environment matching existing XR Test behavior
-    await environmentManager.loadPreset('sphere')
-
-    // Initialize particle system from environment configuration
-    environmentManager.initializeParticleSystem()
+    // Switch to sphere preset (baseline environment)
+    // Note: switchEnvironment handles loading, setting current, and initialization
+    await environmentManager.switchEnvironment('sphere')
 
     console.log('Environment initialized successfully')
   } catch (error) {
@@ -115,6 +148,11 @@ function animate(timestamp) {
   // Update particle system via environment manager
   // VR-only: No mouse/touch interaction (immersive experience)
   environmentManager.update(delta, null)
+
+  // Update spatial UI (gaze and controller input)
+  // Get current XR session for controller tracking
+  const xrSession = renderer.xr.getSession()
+  spatialUI.update(xrSession, delta)
 
   // Check performance every 60 frames
   if (performanceMonitor.shouldCheck()) {
@@ -150,6 +188,7 @@ window.addEventListener('resize', onWindowResize)
 function cleanup() {
   // Remove event listeners
   window.removeEventListener('resize', onWindowResize)
+  window.removeEventListener('keydown', onKeyDown)
 
   // End VR session if active
   if (xrSession) {
@@ -157,12 +196,23 @@ function cleanup() {
     xrSession = null
   }
 
-  // Dispose Three.js resources (via environment manager)
+  // Dispose Three.js resources
+  spatialUI.dispose()
   environmentManager.dispose()
   renderer.dispose()
 }
 
 window.addEventListener('beforeunload', cleanup)
+
+// Keyboard controls for UI toggle
+// 'M' key toggles the spatial UI menu in VR
+function onKeyDown(event) {
+  if (event.key === 'm' || event.key === 'M') {
+    spatialUI.toggle()
+  }
+}
+
+window.addEventListener('keydown', onKeyDown)
 
 // VR button setup
 if (vrButton && webxrSupported) {
@@ -189,8 +239,22 @@ if (vrButton && webxrSupported) {
             session.addEventListener('end', () => {
               xrSession = null
               vrButton.textContent = 'Enter VR'
+              spatialUI.hide() // Hide UI when exiting VR
               console.log('VR session ended by user or system')
             })
+
+            // Handle session errors
+            session.addEventListener('error', (event) => {
+              console.error('VR session error:', event)
+            })
+
+            // Log session info for debugging
+            console.log('Session mode:', session.mode)
+            console.log('Session features:', session.enabledFeatures)
+
+            // Show spatial UI automatically when entering VR
+            spatialUI.show()
+            console.log('Spatial UI shown automatically in VR')
           } else {
             console.error('Failed to start VR session')
             alert('Unable to start VR session. Make sure a VR headset is connected.')
