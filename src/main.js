@@ -6,6 +6,7 @@ import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js'
 import { ParticleSystem } from './particles/ParticleSystem.js'
 import { EnvironmentManager } from './environments/EnvironmentManager.js'
 import { SpatialUI } from './ui/SpatialUI.js'
+import { SpeedControl } from './controls/SpeedControl.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
 import { isWebXRSupported, isVRSessionSupported, requestVRSession, endVRSession } from './utils/webxr.js'
@@ -94,9 +95,15 @@ try {
   console.log('App will continue without hand models')
 }
 
+// Initialize Speed Control
+// VR-04: User-adjustable movement speed (0.25x-2.0x) with localStorage persistence
+const speedControl = new SpeedControl({
+  lerpDuration: 0.3 // 300ms smooth transitions
+})
+
 // Initialize Environment Manager
 // VR-01: Environment-based architecture (sphere preset as baseline)
-const environmentManager = new EnvironmentManager(scene, camera, renderer, rng)
+const environmentManager = new EnvironmentManager(scene, camera, renderer, rng, speedControl)
 
 // Performance monitoring for adaptive quality
 // VR-only: Target 72fps (Quest 2/3 baseline)
@@ -107,7 +114,8 @@ const performanceMonitor = new PerformanceMonitor({
 
 // Initialize Spatial UI for VR environment selection
 // VR-03: Vision Pro-style floating cards with gaze and controller selection
-const spatialUI = new SpatialUI(scene, camera, renderer, environmentManager)
+// VR-04: Includes speed control panel
+const spatialUI = new SpatialUI(scene, camera, renderer, environmentManager, speedControl)
 
 // Async initialization function (avoids top-level await)
 async function initializeEnvironment() {
@@ -145,8 +153,12 @@ function animate(timestamp) {
   // Record frame for performance monitoring
   performanceMonitor.recordFrame(timestamp)
 
+  // Update speed control (smooth lerping transitions)
+  speedControl.update(delta)
+
   // Update particle system via environment manager
   // VR-only: No mouse/touch interaction (immersive experience)
+  // EnvironmentManager applies speed multiplier to delta internally
   environmentManager.update(delta, null)
 
   // Update spatial UI (gaze and controller input)

@@ -89,8 +89,12 @@ export class EnvironmentCard {
     const w = this.canvasWidth
     const h = this.canvasHeight
 
-    // Clear canvas
+    // Clear canvas completely
     ctx.clearRect(0, 0, w, h)
+
+    // Fill with transparent background to ensure clean slate
+    ctx.fillStyle = 'rgba(0, 0, 0, 0)'
+    ctx.fillRect(0, 0, w, h)
 
     // === Background (glassmorphic gradient) ===
     const gradient = ctx.createLinearGradient(0, 0, 0, h)
@@ -120,40 +124,39 @@ export class EnvironmentCard {
     ctx.lineWidth = glowWidth
     ctx.strokeRect(glowWidth / 2, glowWidth / 2, w - glowWidth, h - glowWidth)
 
-    // === Environment name (top) ===
-    ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui'
+    // === Environment name (centered, large) ===
+    ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui'
     ctx.fillStyle = 'white'
     ctx.textAlign = 'center'
-    ctx.textBaseline = 'top'
-    ctx.fillText(this.environment.name, w / 2, 60)
+    ctx.textBaseline = 'middle'
+    ctx.fillText(this.environment.name, w / 2, h / 2 - 40)
 
-    // === Environment description (middle) ===
-    ctx.font = '28px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui'
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+    // === Environment description (smaller, subtle) ===
+    ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
 
-    // Word wrap description (multi-line)
+    // Single line description (truncate if too long)
     const description = this.environment.description
-    const maxWidth = w - 80
-    const lineHeight = 36
-    const words = description.split(' ')
-    let line = ''
-    let y = 140
+    const maxWidth = w - 60
+    let displayText = description
 
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line + words[i] + ' '
-      const metrics = ctx.measureText(testLine)
-
-      if (metrics.width > maxWidth && i > 0) {
-        ctx.fillText(line, w / 2, y)
-        line = words[i] + ' '
-        y += lineHeight
-      } else {
-        line = testLine
+    if (ctx.measureText(description).width > maxWidth) {
+      // Truncate with ellipsis
+      const words = description.split(' ')
+      displayText = ''
+      for (let i = 0; i < words.length; i++) {
+        const testLine = displayText + words[i] + ' '
+        if (ctx.measureText(testLine).width > maxWidth) {
+          displayText = displayText.trim() + '...'
+          break
+        }
+        displayText = testLine
       }
     }
-    ctx.fillText(line, w / 2, y)
+
+    ctx.fillText(displayText, w / 2, h / 2 + 50)
 
     // === Dwell progress indicator (bottom, only if hovering) ===
     if (this.isHovered && this.dwellProgress > 0) {

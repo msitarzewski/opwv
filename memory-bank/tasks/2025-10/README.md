@@ -261,21 +261,43 @@ This month focuses on MVP development for the Organic Particle WebGL Visualizer 
 - Status: ✅ Complete (Vision Pro spatial UI fully functional)
 - See: [281028_vr-03-spatial-ui-framework.md](./281028_vr-03-spatial-ui-framework.md)
 
+### 2025-10-28: Speed Control System (VR-04)
+- Created SpeedControl class (196 lines) - speed state, smooth lerping, localStorage
+- Created SpeedControlPanel UI (294 lines) - canvas-based slider, gaze/pinch interaction
+- Created GazeCursor visual reticle (181 lines) - crosshair, dwell progress ring
+- Extended EnvironmentManager to apply speed multiplier to delta time
+- Extended GazeController for speed panel button/slider detection (UV→canvas coords)
+- Extended ControllerInput for pinch-and-drag slider interaction
+- Integrated SpeedControlPanel into SpatialUI (positioned y=-1.6, below cards)
+- Speed range: 0.25x - 2.0x (default 1.0x)
+- Smooth transitions: 0.3s ease-in-out lerp
+- localStorage persistence: opwv_speed_multiplier key
+- Pinch-and-drag: Continuous slider updates while pinching
+- Gaze-based: 0.8s dwell timer for slider position selection
+- Visual simplification: Removed preset buttons, tick labels (slider-only design)
+- UI size reduction: Environment cards 1.2×1.4 (30% smaller), speed panel 2.5×0.8
+- Bundle: 610.08 kB (156.21 kB gzipped) - +10.95 kB (+1.8%)
+- Zero errors, zero warnings
+- Vision Pro tested: Speed control functional, pinch-and-drag works
+- Known issues: Visual rendering artifacts (text overlap, needs polish)
+- Status: ✅ Complete (Functional - Visual Polish Needed)
+- See: [281028_vr-04-speed-control.md](./281028_vr-04-speed-control.md)
+
 ## Tasks In Progress
 
-### VR Environments Milestone (3/8 Tasks Complete)
+### VR Environments Milestone (4/8 Tasks Complete)
 - ✅ VR-01: Environment System Architecture (2.5hr) - **COMPLETE**
 - ✅ VR-02: VR-Only Migration (1.75hr) - **COMPLETE**
 - ✅ VR-03: Spatial UI Framework (3.5hr) - **COMPLETE**
-- ⏳ VR-04: Speed Control System (1.75hr)
+- ✅ VR-04: Speed Control System (2.0hr) - **COMPLETE** (Visual Polish Needed)
 - ⏳ VR-05: Environment Presets (4.5hr)
 - ⏳ VR-06: Landing Page (1.25hr)
 - ⏳ VR-07: Environment Transitions (2.25hr)
 - ⏳ VR-08: Testing and Optimization (2.75hr)
 
-**Progress**: 3/8 tasks (37.5%) | **Time spent**: 7.75hr | **Estimated remaining**: 10-14hr
+**Progress**: 4/8 tasks (50%) | **Time spent**: 9.75hr | **Estimated remaining**: 8.5-11.75hr
 
-Ready for VR-04 (Speed Control) or VR-05 (Environment Presets)
+Ready for VR-05 (Environment Presets)
 
 ## Tasks Completed (Summary)
 

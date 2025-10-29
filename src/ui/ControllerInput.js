@@ -30,7 +30,10 @@ export class ControllerInput {
     // Controller state
     this.controllers = []
     this.hoveredCard = null
+    this.hoveredPanel = null
     this.triggerPressed = false
+    this.isDragging = false
+    this.dragTarget = null // What we're dragging (card or panel)
 
     // Raycaster for controller pointing
     this.raycaster = new THREE.Raycaster()
@@ -119,6 +122,13 @@ export class ControllerInput {
   onSelectStart(event, index) {
     this.triggerPressed = true
 
+    // Start dragging if hovering over draggable target
+    if (this.hoveredPanel) {
+      this.isDragging = true
+      this.dragTarget = this.hoveredPanel
+      this.dragTarget.setDragging(true)
+    }
+
     // Trigger haptic feedback (if supported)
     this.triggerHaptic(index, 0.5, 50) // 50ms pulse at 50% intensity
   }
@@ -130,6 +140,13 @@ export class ControllerInput {
    */
   onSelectEnd(event, index) {
     this.triggerPressed = false
+
+    // End dragging
+    if (this.isDragging && this.dragTarget) {
+      this.dragTarget.setDragging(false)
+      this.isDragging = false
+      this.dragTarget = null
+    }
 
     // If hovering a card, trigger selection
     if (this.hoveredCard) {
@@ -180,20 +197,27 @@ export class ControllerInput {
       // Update raycaster with controller position and direction
       this.raycaster.set(this.controllerPosition, this.controllerDirection)
 
-      // Check for intersections with card meshes
+      // Check for intersections with interactive meshes
       const intersects = this.raycaster.intersectObjects(cardMeshes, false)
 
       if (intersects.length > 0) {
-        // Hit a card - get closest intersection
-        const hitMesh = intersects[0].object
+        // Hit something - get closest intersection
+        const intersection = intersects[0]
+        const hitMesh = intersection.object
         const hitCard = hitMesh.userData.card
+        const hitPanel = hitMesh.userData.speedPanel
 
-        if (hitCard) {
+        // Handle environment card
+        if (hitCard && !this.isDragging) {
           // If we just started hovering this card
           if (this.hoveredCard !== hitCard) {
             // Clear previous hover
             if (this.hoveredCard) {
               this.hoveredCard.setHovered(false)
+            }
+            if (this.hoveredPanel) {
+              this.hoveredPanel.setSliderHovered(false)
+              this.hoveredPanel = null
             }
 
             // Set new hover
@@ -204,16 +228,57 @@ export class ControllerInput {
             this.triggerHaptic(controllerData.index, 0.3, 30)
           }
         }
+        // Handle speed panel
+        else if (hitPanel) {
+          // Clear card hover
+          if (this.hoveredCard) {
+            this.hoveredCard.setHovered(false)
+            this.hoveredCard = null
+          }
+
+          // Get UV coordinates
+          const uv = intersection.uv
+          if (uv) {
+            const canvasX = uv.x * hitPanel.canvasWidth
+            const canvasY = (1 - uv.y) * hitPanel.canvasHeight
+
+            const isOnSlider = hitPanel.isPointOnSlider(canvasX, canvasY)
+
+            if (isOnSlider) {
+              if (!this.hoveredPanel) {
+                this.hoveredPanel = hitPanel
+                hitPanel.setSliderHovered(true)
+                // Trigger haptic feedback on first hover
+                this.triggerHaptic(controllerData.index, 0.2, 20)
+              }
+
+              // If dragging, continuously update slider position
+              if (this.isDragging && this.dragTarget === hitPanel) {
+                const normalizedX = hitPanel.getSliderNormalizedPosition(canvasX)
+                hitPanel.onSliderInput(normalizedX)
+              }
+            } else if (this.hoveredPanel && !this.isDragging) {
+              this.hoveredPanel.setSliderHovered(false)
+              this.hoveredPanel = null
+            }
+          }
+        }
 
         // Only check first controller with hit (prioritize)
         return
       }
     }
 
-    // No controller hit - clear hover state
-    if (this.hoveredCard) {
-      this.hoveredCard.setHovered(false)
-      this.hoveredCard = null
+    // No controller hit - clear hover state (but keep drag target if dragging)
+    if (!this.isDragging) {
+      if (this.hoveredCard) {
+        this.hoveredCard.setHovered(false)
+        this.hoveredCard = null
+      }
+      if (this.hoveredPanel) {
+        this.hoveredPanel.setSliderHovered(false)
+        this.hoveredPanel = null
+      }
     }
   }
 
@@ -274,7 +339,18 @@ export class ControllerInput {
       this.hoveredCard = null
     }
 
+    if (this.hoveredPanel) {
+      this.hoveredPanel.setSliderHovered(false)
+      this.hoveredPanel = null
+    }
+
+    if (this.dragTarget) {
+      this.dragTarget.setDragging(false)
+      this.dragTarget = null
+    }
+
     this.triggerPressed = false
+    this.isDragging = false
   }
 
   /**

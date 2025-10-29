@@ -21,12 +21,14 @@ export class EnvironmentManager {
    * @param {THREE.Camera} camera - Active camera (for future spatial UI)
    * @param {THREE.WebGLRenderer} renderer - Three.js renderer
    * @param {SeededRandom} rng - Seeded random number generator for reproducibility
+   * @param {SpeedControl} speedControl - Optional speed control instance
    */
-  constructor(scene, camera, renderer, rng) {
+  constructor(scene, camera, renderer, rng, speedControl = null) {
     this.scene = scene
     this.camera = camera
     this.renderer = renderer
     this.rng = rng
+    this.speedControl = speedControl
 
     // Environment state
     this.availableEnvironments = new Map() // presetId -> Environment
@@ -163,7 +165,12 @@ export class EnvironmentManager {
    */
   update(delta, mousePosition = null) {
     if (this.particleSystem) {
-      this.particleSystem.update(delta, mousePosition)
+      // Apply speed multiplier if speed control is available
+      const adjustedDelta = this.speedControl
+        ? delta * this.speedControl.getCurrentSpeed()
+        : delta
+
+      this.particleSystem.update(adjustedDelta, mousePosition)
     }
   }
 

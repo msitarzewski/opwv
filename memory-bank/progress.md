@@ -157,7 +157,7 @@
   - XR Test milestone 100% complete (6/6 tasks)
 
 ## In Progress
-- ⏳ **VR Environments Milestone** (3/8 tasks complete - 7.75hr spent)
+- ⏳ **VR Environments Milestone** (4/8 tasks complete - 9.75hr spent)
   - ✅ VR-01: Environment System Architecture (COMPLETE)
     - Environment class with configuration schema (213 lines)
     - EnvironmentManager for multi-environment orchestration (168 lines)
@@ -180,8 +180,17 @@
     - Lighting added (ambient + directional for hand visibility)
     - Bundle: 599.13 kB (153.98 kB gzipped) - +117.59 kB (+24.4%)
     - Vision Pro tested and approved
-  - Ready for VR-04 (Speed Control) or VR-05 (Environment Presets)
-  - Estimated remaining: 10-14 hours
+  - ✅ VR-04: Speed Control System (COMPLETE - Visual Polish Needed)
+    - SpeedControl class (196 lines) - lerp, localStorage, presets
+    - SpeedControlPanel UI (294 lines) - slider, gaze/pinch interaction
+    - GazeCursor reticle (181 lines) - crosshair, dwell progress ring
+    - Pinch-and-drag slider interaction (continuous updates)
+    - Speed range: 0.25x-2.0x with 0.3s smooth transitions
+    - localStorage persistence across sessions
+    - Bundle: 610.08 kB (156.21 kB gzipped) - +10.95 kB (+1.8%)
+    - Functional but has visual rendering artifacts
+  - Ready for VR-05 (Environment Presets)
+  - Estimated remaining: 8.5-11.75 hours
 
 ## Upcoming Milestones
 - **VR Environments (PLANNED - V1 Release)**: Multiple spatial environments with Vision Pro UI
