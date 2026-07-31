@@ -9,23 +9,20 @@ import * as THREE from 'three'
  * @param {number} weight - Force strength multiplier
  * @returns {THREE.Vector3} - Force to apply to velocity
  */
-export function calculateCohesion(particle, neighbors, weight) {
+export function calculateCohesion(particle, neighbors, weight, target = new THREE.Vector3()) {
+  target.set(0, 0, 0)
   if (neighbors.length === 0) {
-    return new THREE.Vector3(0, 0, 0)
+    return target
   }
 
   // Calculate average position of neighbors
-  const centerOfMass = new THREE.Vector3(0, 0, 0)
   for (const neighbor of neighbors) {
-    centerOfMass.add(neighbor.position)
+    target.add(neighbor.position)
   }
-  centerOfMass.divideScalar(neighbors.length)
+  target.divideScalar(neighbors.length)
 
   // Steer toward center of mass
-  const force = centerOfMass.sub(particle.position)
-  force.multiplyScalar(weight)
-
-  return force
+  return target.sub(particle.position).multiplyScalar(weight)
 }
 
 /**
@@ -35,23 +32,20 @@ export function calculateCohesion(particle, neighbors, weight) {
  * @param {number} weight - Force strength multiplier
  * @returns {THREE.Vector3} - Force to apply to velocity
  */
-export function calculateAlignment(particle, neighbors, weight) {
+export function calculateAlignment(particle, neighbors, weight, target = new THREE.Vector3()) {
+  target.set(0, 0, 0)
   if (neighbors.length === 0) {
-    return new THREE.Vector3(0, 0, 0)
+    return target
   }
 
   // Calculate average velocity of neighbors
-  const avgVelocity = new THREE.Vector3(0, 0, 0)
   for (const neighbor of neighbors) {
-    avgVelocity.add(neighbor.velocity)
+    target.add(neighbor.velocity)
   }
-  avgVelocity.divideScalar(neighbors.length)
+  target.divideScalar(neighbors.length)
 
   // Steer toward average velocity
-  const force = avgVelocity.sub(particle.velocity)
-  force.multiplyScalar(weight)
-
-  return force
+  return target.sub(particle.velocity).multiplyScalar(weight)
 }
 
 /**
@@ -62,12 +56,18 @@ export function calculateAlignment(particle, neighbors, weight) {
  * @param {number} weight - Force strength multiplier
  * @returns {THREE.Vector3} - Force to apply to velocity
  */
-export function calculateSeparation(particle, neighbors, radius, weight) {
+export function calculateSeparation(
+  particle,
+  neighbors,
+  radius,
+  weight,
+  target = new THREE.Vector3(),
+  scratch = new THREE.Vector3()
+) {
+  target.set(0, 0, 0)
   if (neighbors.length === 0) {
-    return new THREE.Vector3(0, 0, 0)
+    return target
   }
-
-  const force = new THREE.Vector3(0, 0, 0)
 
   // For each neighbor, add repulsion force
   for (const neighbor of neighbors) {
@@ -76,24 +76,21 @@ export function calculateSeparation(particle, neighbors, radius, weight) {
     // Only separate from very close neighbors
     if (distance > 0 && distance < radius) {
       // Create vector pointing away from neighbor
-      const diff = new THREE.Vector3()
-        .subVectors(particle.position, neighbor.position)
+      scratch.subVectors(particle.position, neighbor.position)
 
       // Stronger force when closer (inverse distance)
-      diff.normalize()
-      diff.divideScalar(distance) // Closer = stronger
+      scratch.normalize()
+      scratch.divideScalar(distance) // Closer = stronger
 
-      force.add(diff)
+      target.add(scratch)
     }
   }
 
   // Average and apply weight
   if (neighbors.length > 0) {
-    force.divideScalar(neighbors.length)
+    target.divideScalar(neighbors.length)
   }
-  force.multiplyScalar(weight)
-
-  return force
+  return target.multiplyScalar(weight)
 }
 
 /**
@@ -104,19 +101,25 @@ export function calculateSeparation(particle, neighbors, radius, weight) {
  * @param {number} radius - Maximum interaction distance
  * @returns {THREE.Vector3} - Force to apply to velocity
  */
-export function calculateUserAttraction(particle, mousePosition, strength, radius) {
+export function calculateUserAttraction(
+  particle,
+  mousePosition,
+  strength,
+  radius,
+  target = new THREE.Vector3()
+) {
+  target.set(0, 0, 0)
   // No interaction if mouse position not available
   if (!mousePosition) {
-    return new THREE.Vector3(0, 0, 0)
+    return target
   }
 
-  // Calculate distance to mouse position
-  const mousePos = new THREE.Vector3(mousePosition.x, mousePosition.y, 0)
-  const distance = particle.position.distanceTo(mousePos)
+  target.set(mousePosition.x, mousePosition.y, mousePosition.z || 0)
+  const distance = particle.position.distanceTo(target)
 
   // Only attract particles within radius
   if (distance > radius || distance === 0) {
-    return new THREE.Vector3(0, 0, 0)
+    return target.set(0, 0, 0)
   }
 
   // Inverse square falloff for smooth, natural attraction
@@ -126,36 +129,34 @@ export function calculateUserAttraction(particle, mousePosition, strength, radiu
   const forceMagnitude = strength / (distance * distance + epsilon)
 
   // Create force vector pointing toward mouse
-  const force = new THREE.Vector3()
-    .subVectors(mousePos, particle.position)
+  return target
+    .sub(particle.position)
     .normalize()
     .multiplyScalar(forceMagnitude)
-
-  return force
 }
 
 /**
- * Wrap position to bounds (toroidal space for 2D)
- * @param {THREE.Vector3} position - Position to wrap
- * @param {Object} bounds - {minX, maxX, minY, maxY}
+ * Calculate a normalized 3D attraction or repulsion force.
+ * @param {Object} particle - Particle receiving the force
+ * @param {Object} source - {position, mode, strength, radius}
+ * @param {THREE.Vector3} target - Reusable result vector
+ * @returns {THREE.Vector3}
  */
-export function wrapBounds(position, bounds) {
-  const width = bounds.maxX - bounds.minX
-  const height = bounds.maxY - bounds.minY
+export function calculateUserInteraction(particle, source, target = new THREE.Vector3()) {
+  target.set(0, 0, 0)
+  if (!source || !source.position) return target
 
-  // Wrap X
-  if (position.x > bounds.maxX) {
-    position.x = bounds.minX + (position.x - bounds.maxX)
-  } else if (position.x < bounds.minX) {
-    position.x = bounds.maxX + (position.x - bounds.minX)
-  }
+  const radius = Number.isFinite(source.radius) ? Math.max(0, source.radius) : 4
+  const strength = Number.isFinite(source.strength) ? source.strength : 1
+  const distanceSquared = particle.position.distanceToSquared(source.position)
+  if (distanceSquared === 0 || distanceSquared > radius * radius) return target
 
-  // Wrap Y
-  if (position.y > bounds.maxY) {
-    position.y = bounds.minY + (position.y - bounds.maxY)
-  } else if (position.y < bounds.minY) {
-    position.y = bounds.maxY + (position.y - bounds.minY)
-  }
+  const direction = source.mode === 'repel' ? -1 : 1
+  const forceMagnitude = direction * strength / (distanceSquared + 0.1)
+  return target
+    .subVectors(source.position, particle.position)
+    .normalize()
+    .multiplyScalar(forceMagnitude)
 }
 
 /**

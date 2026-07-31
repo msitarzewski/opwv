@@ -20,7 +20,9 @@ class Vector4D {
     const sin = Math.sin(angle)
     const x = this.x * cos - this.w * sin
     const w = this.x * sin + this.w * cos
-    return new Vector4D(x, this.y, this.z, w)
+    this.x = x
+    this.w = w
+    return this
   }
 
   // Rotate in YW plane
@@ -29,7 +31,9 @@ class Vector4D {
     const sin = Math.sin(angle)
     const y = this.y * cos - this.w * sin
     const w = this.y * sin + this.w * cos
-    return new Vector4D(this.x, y, this.z, w)
+    this.y = y
+    this.w = w
+    return this
   }
 
   // Rotate in ZW plane
@@ -38,13 +42,19 @@ class Vector4D {
     const sin = Math.sin(angle)
     const z = this.z * cos - this.w * sin
     const w = this.z * sin + this.w * cos
-    return new Vector4D(this.x, this.y, z, w)
+    this.z = z
+    this.w = w
+    return this
   }
 
   // Project to 3D using perspective projection
-  projectTo3D(distance = 2.0) {
-    const factor = distance / (distance - this.w)
-    return new THREE.Vector3(
+  projectTo3D(distance = 2.0, target = new THREE.Vector3()) {
+    const denominator = distance - this.w
+    const safeDenominator = Math.abs(denominator) < 0.0001
+      ? Math.sign(denominator || 1) * 0.0001
+      : denominator
+    const factor = distance / safeDenominator
+    return target.set(
       this.x * factor,
       this.y * factor,
       this.z * factor
@@ -64,7 +74,13 @@ class Vector4D {
  * @param {number} config.projectionDistance - 4D projection distance
  * @param {number} delta - Time delta
  */
-export function apply4DRotation(particle, config, delta) {
+export function apply4DRotation(
+  particle,
+  config,
+  delta,
+  positionDelta = new THREE.Vector3(),
+  projectedPosition = new THREE.Vector3()
+) {
   const {
     rotationSpeedXW = 0.5,
     rotationSpeedYW = 0.3,
@@ -84,7 +100,7 @@ export function apply4DRotation(particle, config, delta) {
   }
 
   // Apply 4D rotations
-  let rotated = particle.rotation4D
+  const rotated = particle.rotation4D
     .rotateXW(rotationSpeedXW * delta)
     .rotateYW(rotationSpeedYW * delta)
     .rotateZW(rotationSpeedZW * delta)
@@ -93,14 +109,11 @@ export function apply4DRotation(particle, config, delta) {
   particle.rotation4D = rotated
 
   // Project to 3D and update position
-  const newPosition = rotated.projectTo3D(projectionDistance)
+  rotated.projectTo3D(projectionDistance, projectedPosition)
 
   // Calculate velocity from position change
-  const positionDelta = new THREE.Vector3().subVectors(newPosition, particle.position)
-  particle.velocity.copy(positionDelta.divideScalar(delta || 0.0166)) // Approximate velocity
-
-  // Update position
-  particle.position.copy(newPosition)
+  positionDelta.subVectors(projectedPosition, particle.position)
+  particle.velocity.copy(positionDelta).divideScalar(delta || 0.0166)
 }
 
 export { Vector4D }

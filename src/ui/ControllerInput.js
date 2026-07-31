@@ -31,6 +31,12 @@ export class ControllerInput {
     this.controllers = []
     this.hoveredCard = null
     this.hoveredPanel = null
+    this.hoveredToggle = null
+    this.toggleOrb = null
+    this.raycastTargets = []
+    this.raycastSource = null
+    this.raycastSourceLength = -1
+    this.raycastEnabledState = null
     this.triggerPressed = false
     this.isDragging = false
     this.dragTarget = null // What we're dragging (card or panel)
@@ -67,18 +73,26 @@ export class ControllerInput {
 
       if (controller) {
         // Store controller reference
+        const handlers = {
+          selectstart: (event) => this.onSelectStart(event, i),
+          selectend: (event) => this.onSelectEnd(event, i),
+          connected: (event) => this.onControllerConnected(event, i),
+          disconnected: (event) => this.onControllerDisconnected(event, i)
+        }
+
         this.controllers.push({
           index: i,
           controller: controller,
           gamepad: null,
-          inputSource: null
+          inputSource: null,
+          handlers
         })
 
         // Add event listeners for controller buttons
-        controller.addEventListener('selectstart', (event) => this.onSelectStart(event, i))
-        controller.addEventListener('selectend', (event) => this.onSelectEnd(event, i))
-        controller.addEventListener('connected', (event) => this.onControllerConnected(event, i))
-        controller.addEventListener('disconnected', (event) => this.onControllerDisconnected(event, i))
+        controller.addEventListener('selectstart', handlers.selectstart)
+        controller.addEventListener('selectend', handlers.selectend)
+        controller.addEventListener('connected', handlers.connected)
+        controller.addEventListener('disconnected', handlers.disconnected)
       }
     }
   }
@@ -148,8 +162,11 @@ export class ControllerInput {
       this.dragTarget = null
     }
 
-    // If hovering a card, trigger selection
-    if (this.hoveredCard) {
+    if (this.hoveredToggle) {
+      this.hoveredToggle.trigger()
+      this.triggerHaptic(index, 0.7, 80)
+    } else if (this.hoveredCard) {
+      // If hovering a card, trigger selection
       this.triggerSelection(this.hoveredCard, index)
     }
   }
@@ -160,6 +177,7 @@ export class ControllerInput {
    */
   setEnabled(enabled) {
     this.enabled = enabled
+    this.raycastSource = null
 
     // Reset state when disabled
     if (!enabled) {
@@ -168,12 +186,27 @@ export class ControllerInput {
   }
 
   /**
+   * Set the menu orb that remains interactive while panels are hidden.
+   * @param {UIToggleOrb|null} toggleOrb
+   */
+  setToggleOrb(toggleOrb) {
+    this.toggleOrb = toggleOrb
+    this.raycastSource = null
+  }
+
+  /**
    * Update controller input (call every frame)
    * @param {XRSession|null} xrSession - Active XR session
    * @param {Array<THREE.Mesh>} cardMeshes - Array of card meshes to raycast against
    */
   update(xrSession, cardMeshes) {
-    if (!this.enabled || !xrSession || !cardMeshes || cardMeshes.length === 0) {
+    if (!xrSession) {
+      return
+    }
+
+    const interactableMeshes = this.getRaycastTargets(cardMeshes)
+
+    if (interactableMeshes.length === 0) {
       return
     }
 
@@ -198,17 +231,27 @@ export class ControllerInput {
       this.raycaster.set(this.controllerPosition, this.controllerDirection)
 
       // Check for intersections with interactive meshes
-      const intersects = this.raycaster.intersectObjects(cardMeshes, false)
+      const intersects = this.raycaster.intersectObjects(interactableMeshes, true)
 
       if (intersects.length > 0) {
         // Hit something - get closest intersection
         const intersection = intersects[0]
-        const hitMesh = intersection.object
-        const hitCard = hitMesh.userData.card
-        const hitPanel = hitMesh.userData.speedPanel
+        const target = this.getInteractionTarget(intersection.object)
+        const hitCard = target?.userData.card
+        const hitPanel = target?.userData.speedPanel
+        const hitToggle = target?.userData.toggleOrb
 
-        // Handle environment card
-        if (hitCard && !this.isDragging) {
+        if (hitToggle && !this.isDragging) {
+          this.clearCardAndPanelHover()
+          if (this.hoveredToggle !== hitToggle) {
+            this.hoveredToggle?.setHovered(false)
+            this.hoveredToggle = hitToggle
+            this.hoveredToggle.setHovered(true)
+            this.triggerHaptic(controllerData.index, 0.25, 25)
+          }
+        } else if (hitCard && !this.isDragging) {
+          // Handle environment card
+          this.clearToggleHover()
           // If we just started hovering this card
           if (this.hoveredCard !== hitCard) {
             // Clear previous hover
@@ -230,6 +273,7 @@ export class ControllerInput {
         }
         // Handle speed panel
         else if (hitPanel) {
+          this.clearToggleHover()
           // Clear card hover
           if (this.hoveredCard) {
             this.hoveredCard.setHovered(false)
@@ -279,6 +323,70 @@ export class ControllerInput {
         this.hoveredPanel.setSliderHovered(false)
         this.hoveredPanel = null
       }
+      this.clearToggleHover()
+    }
+  }
+
+  /**
+   * Rebuild the raycast target list only when its source changes.
+   * @param {Array<THREE.Mesh>} cardMeshes
+   * @returns {Array<THREE.Mesh>}
+   */
+  getRaycastTargets(cardMeshes) {
+    const source = Array.isArray(cardMeshes) ? cardMeshes : []
+    if (
+      source === this.raycastSource &&
+      source.length === this.raycastSourceLength &&
+      this.enabled === this.raycastEnabledState
+    ) {
+      return this.raycastTargets
+    }
+
+    this.raycastTargets.length = 0
+    if (this.enabled) {
+      this.raycastTargets.push(...source)
+    }
+    if (this.toggleOrb) {
+      this.raycastTargets.push(this.toggleOrb.getMesh())
+    }
+
+    this.raycastSource = source
+    this.raycastSourceLength = source.length
+    this.raycastEnabledState = this.enabled
+    return this.raycastTargets
+  }
+
+  /**
+   * Find interaction metadata on an intersected mesh or its parents.
+   * @param {THREE.Object3D} object
+   * @returns {THREE.Object3D|null}
+   */
+  getInteractionTarget(object) {
+    let current = object
+    while (current) {
+      if (current.userData.card || current.userData.speedPanel || current.userData.toggleOrb) {
+        return current
+      }
+      current = current.parent
+    }
+    return null
+  }
+
+  clearCardAndPanelHover() {
+    if (this.hoveredCard) {
+      this.hoveredCard.setHovered(false)
+      this.hoveredCard = null
+    }
+    if (this.hoveredPanel && !this.isDragging) {
+      this.hoveredPanel.setSliderHovered(false)
+      this.hoveredPanel = null
+    }
+  }
+
+  clearToggleHover() {
+    if (this.hoveredToggle) {
+      this.hoveredToggle.setHovered(false)
+      this.hoveredToggle = null
     }
   }
 
@@ -351,6 +459,7 @@ export class ControllerInput {
 
     this.triggerPressed = false
     this.isDragging = false
+    this.clearToggleHover()
   }
 
   /**
@@ -383,6 +492,16 @@ export class ControllerInput {
   dispose() {
     this.resetController()
     this.onSelect = null
+    this.toggleOrb = null
+    this.raycastTargets.length = 0
+    for (const controllerData of this.controllers) {
+      const { controller, handlers } = controllerData
+      if (!controller || !handlers) continue
+      controller.removeEventListener('selectstart', handlers.selectstart)
+      controller.removeEventListener('selectend', handlers.selectend)
+      controller.removeEventListener('connected', handlers.connected)
+      controller.removeEventListener('disconnected', handlers.disconnected)
+    }
     this.controllers = []
   }
 }

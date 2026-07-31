@@ -3,12 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05050b" />
+    <meta name="color-scheme" content="dark" />
+    <meta
+      name="description"
+      content="Explore seven responsive particle worlds in your browser or an immersive WebXR headset."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2305050b'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%238ef7ff' stroke-width='5'/%3E%3Ccircle cx='43' cy='20' r='5' fill='%23ff9fd8'/%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="/style.css" />
-    <title>Organic Particle WebGL Visualizer</title>
+    <title>OPWV — Organic Particle Worlds</title>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
-    <button id="vr-button" style="display:none;">Enter VR</button>
+    <button class="skip-link" id="skip-to-controls" type="button">
+      Skip to experience controls
+    </button>
+
+    <div id="app-shell" class="app-shell">
+      <canvas
+        id="canvas"
+        aria-label="Live generative particle preview"
+        aria-describedby="preview-description"
+      ></canvas>
+
+      <main id="landing-panel" class="landing-panel" tabindex="-1">
+        <header class="site-header">
+          <a class="brand" href="/" aria-label="OPWV home">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>OPWV</span>
+          </a>
+          <p id="xr-status" class="capability-status" role="status" aria-live="polite">
+            Checking immersive mode…
+          </p>
+        </header>
+
+        <section class="hero" aria-labelledby="hero-title">
+          <p class="eyebrow">Organic Particle Worlds</p>
+          <h1 id="hero-title">Step inside a living field of light.</h1>
+          <p id="preview-description" class="hero-copy">
+            Seven generative environments respond to your attention, hands, and pace.
+            Explore on this screen, then enter an immersive world when your headset is ready.
+          </p>
+
+          <div class="primary-actions" aria-label="Experience actions">
+            <button id="enter-vr-button" class="button button-primary" type="button" disabled>
+              <span>Enter immersive mode</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+            <button
+              id="pause-preview-button"
+              class="button button-secondary"
+              type="button"
+              aria-pressed="false"
+              aria-controls="canvas"
+            >
+              Pause preview
+            </button>
+          </div>
+
+          <div id="app-status" class="app-status" role="status" aria-live="polite">
+            Preview loading…
+          </div>
+          <div id="app-error" class="app-error" role="alert" aria-live="assertive" hidden></div>
+        </section>
+
+        <section class="experience-controls" aria-labelledby="worlds-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Choose a world</p>
+              <h2 id="worlds-title">Seven ways to drift</h2>
+            </div>
+            <p>Use <kbd>←</kbd> and <kbd>→</kbd> to move through the list.</p>
+          </div>
+
+          <div
+            id="environment-list"
+            class="environment-list"
+            role="listbox"
+            aria-label="Particle environments"
+            tabindex="0"
+          >
+            <button class="environment-chip is-selected" type="button" role="option" aria-selected="true" tabindex="0" data-environment="sphere">
+              <span>01</span><strong>Sphere</strong><small>Flocking</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="nebula">
+              <span>02</span><strong>Nebula</strong><small>Brownian cloud</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="galaxy">
+              <span>03</span><strong>Galaxy</strong><small>Orbital light</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="lattice">
+              <span>04</span><strong>Lattice</strong><small>Spring grid</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="vortex">
+              <span>05</span><strong>Vortex</strong><small>Flow field</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="ocean">
+              <span>06</span><strong>Ocean</strong><small>Wave plane</small>
+            </button>
+            <button class="environment-chip" type="button" role="option" aria-selected="false" tabindex="-1" data-environment="hypercube">
+              <span>07</span><strong>Hypercube</strong><small>Four dimensions</small>
+            </button>
+          </div>
+        </section>
+
+        <footer class="utility-bar" aria-label="Scene utilities">
+          <button id="share-scene-button" class="text-button" type="button">
+            Share this scene
+          </button>
+          <button id="audio-toggle-button" class="text-button" type="button" aria-pressed="false">
+            Sound off
+          </button>
+          <button id="replay-tutorial-button" class="text-button" type="button">
+            Replay tutorial
+          </button>
+          <span class="keyboard-hint"><kbd>M</kbd> opens the menu in immersive mode</span>
+        </footer>
+      </main>
+    </div>
+
+    <noscript>
+      <p class="noscript-message">
+        OPWV needs JavaScript and WebGL to render its particle worlds.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

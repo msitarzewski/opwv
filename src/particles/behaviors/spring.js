@@ -14,7 +14,12 @@ import * as THREE from 'three'
  * @param {number} config.maxForce - Maximum spring force magnitude
  * @param {number} delta - Time delta
  */
-export function applySpringForce(particle, config, delta) {
+export function applySpringForce(
+  particle,
+  config,
+  delta,
+  displacement = new THREE.Vector3()
+) {
   const {
     springConstant = 2.0,
     damping = 0.95,
@@ -28,10 +33,7 @@ export function applySpringForce(particle, config, delta) {
   }
 
   // Displacement from anchor (rest length = 0)
-  const displacement = new THREE.Vector3().subVectors(
-    particle.anchorPoint,
-    particle.position
-  )
+  displacement.subVectors(particle.anchorPoint, particle.position)
 
   // Hooke's law: F = -k * x
   const springForce = displacement.multiplyScalar(springConstant)
@@ -45,5 +47,5 @@ export function applySpringForce(particle, config, delta) {
   particle.velocity.add(springForce.multiplyScalar(delta))
 
   // Damping (prevents endless oscillation)
-  particle.velocity.multiplyScalar(damping)
+  particle.velocity.multiplyScalar(Math.pow(damping, delta * 72))
 }

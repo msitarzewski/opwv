@@ -29,10 +29,11 @@ function galaxyInitialization(rng, palette, bounds) {
   const theta = rand() * Math.PI * 4 + armAngleOffset
   let r = a * Math.exp(b * theta)
   r += (rand() - 0.5) * 2.0
-  r = Math.max(bounds.innerRadius, Math.min(bounds.outerRadius, r))
 
   // Thin disk
   const z = (rand() - 0.5) * 3.0
+  const maxPlanarRadius = Math.sqrt(Math.max(0, bounds.outerRadius ** 2 - z ** 2))
+  r = Math.max(bounds.innerRadius, Math.min(maxPlanarRadius, r))
 
   const x = r * Math.cos(theta)
   const y = r * Math.sin(theta)
@@ -52,7 +53,9 @@ function galaxyInitialization(rng, palette, bounds) {
   // Color: Hotter (bluer) stars near center, cooler (yellower) at edges
   const colors = ['#1E90FF', '#87CEEB', '#FFFFFF', '#F0E68C', '#FFD700', '#FFA500']
   const colorIndex = Math.floor(rand() * colors.length)
-  const color = new THREE.Color(colors[colorIndex])
+  const color = palette?.length
+    ? palette[colorIndex % palette.length].clone()
+    : new THREE.Color(colors[colorIndex])
 
   const size = rand() * 2 + 2 // 2-4 range
 
@@ -71,7 +74,8 @@ const galaxyEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: galaxyInitialization
+    initializationFn: galaxyInitialization,
+    wrapMode: 'spherical'
   },
 
   // Orbital mechanics (NO flocking)
@@ -99,7 +103,7 @@ const galaxyEnvironment = {
   },
 
   visual: {
-    renderMode: 'points',
+    renderMode: 'stars',
     colorPalette: [
       '#1E90FF',  // Dodger blue (hot young stars)
       '#87CEEB',  // Sky blue

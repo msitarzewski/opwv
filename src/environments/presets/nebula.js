@@ -21,12 +21,13 @@ function nebulaInitialization(rng, palette, bounds) {
   // Random spherical position
   const r = rand() * (bounds.outerRadius - bounds.innerRadius) + bounds.innerRadius
   const theta = rand() * Math.PI * 2
-  const phi = rand() * Math.PI
+  const cosPhi = rand() * 2 - 1
+  const sinPhi = Math.sqrt(1 - cosPhi * cosPhi)
 
   const position = new THREE.Vector3(
-    r * Math.sin(phi) * Math.cos(theta),
-    r * Math.sin(phi) * Math.sin(theta),
-    r * Math.cos(phi)
+    r * sinPhi * Math.cos(theta),
+    r * sinPhi * Math.sin(theta),
+    r * cosPhi
   )
 
   // Very slow initial velocity (Brownian motion will take over)
@@ -39,7 +40,9 @@ function nebulaInitialization(rng, palette, bounds) {
   // Color from deep space palette
   const colors = ['#8B00FF', '#4B0082', '#FF00FF', '#9370DB', '#BA55D3', '#8A2BE2']
   const colorIndex = Math.floor(rand() * colors.length)
-  const color = new THREE.Color(colors[colorIndex])
+  const color = palette?.length
+    ? palette[colorIndex % palette.length].clone()
+    : new THREE.Color(colors[colorIndex])
 
   // Larger particles for glowing nebula effect
   const size = rand() * 4 + 4 // 4-8 range (much larger than baseline)
@@ -59,7 +62,8 @@ const nebulaEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: nebulaInitialization
+    initializationFn: nebulaInitialization,
+    wrapMode: 'spherical'
   },
 
   // Brownian motion behavior (NO flocking)
@@ -88,7 +92,7 @@ const nebulaEnvironment = {
 
   // Visual: Larger glowing particles
   visual: {
-    renderMode: 'points',      // Standard points (spheres would be too heavy)
+    renderMode: 'glow',
     colorPalette: [
       '#8B00FF',  // Electric purple
       '#4B0082',  // Indigo
@@ -100,7 +104,7 @@ const nebulaEnvironment = {
     particleSize: 6,           // Much larger than baseline (3)
     opacity: 0.6,              // More transparent for soft glow
     sizeAttenuation: true,     // Distance-based size for depth
-    emissive: '#8B00FF',       // Purple glow (for future sphere renderer)
+    emissive: '#8B00FF',       // Purple glow tint
     emissiveIntensity: 0.8     // Strong glow
   },
 

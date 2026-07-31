@@ -2,17 +2,34 @@
 // Entry point
 
 import * as THREE from 'three'
-import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js'
-import { ParticleSystem } from './particles/ParticleSystem.js'
 import { EnvironmentManager } from './environments/EnvironmentManager.js'
 import { SpatialUI } from './ui/SpatialUI.js'
 import { SpeedControl } from './controls/SpeedControl.js'
 import { SeededRandom, getSeedFromURL, generateSeed } from './utils/random.js'
 import { PerformanceMonitor } from './utils/performance.js'
 import { isWebXRSupported, isVRSessionSupported, requestVRSession, endVRSession } from './utils/webxr.js'
+import { ParticleInteraction } from './interaction/ParticleInteraction.js'
+import { AudioManager } from './audio/AudioManager.js'
+import {
+  copySceneURL,
+  parseSceneSpeed,
+  parseSceneState,
+  updateSceneURL
+} from './utils/sceneState.js'
 
 // Generate or parse seed for reproducible randomization
-const seed = getSeedFromURL() || generateSeed()
+const generatedSeed = generateSeed()
+const initialURLParams = new URLSearchParams(window.location.search)
+const explicitSceneSpeed = parseSceneSpeed(initialURLParams.get('speed'))
+const explicitAudioValue = initialURLParams.get('audio')
+const hasExplicitAudioPreference = ['1', 'true', '0', 'false'].includes(explicitAudioValue)
+const initialSceneState = parseSceneState(window.location.search, {
+  environmentId: 'sphere',
+  seed: getSeedFromURL() ?? generatedSeed,
+  speed: 1,
+  audioEnabled: false
+})
+const seed = initialSceneState.seed ?? generatedSeed
 const rng = new SeededRandom(seed)
 console.log('Seed:', seed, '(use ?seed=' + seed + ' to reproduce this visual)')
 
@@ -28,11 +45,24 @@ if (!canvas) {
   throw new Error('Canvas element not found')
 }
 
-// Get VR button element
-const vrButton = document.querySelector('#vr-button')
+// Accessible landing controls and status surfaces
+const vrButton = document.querySelector('#enter-vr-button')
+const xrStatus = document.querySelector('#xr-status')
+const appStatus = document.querySelector('#app-status')
+const appError = document.querySelector('#app-error')
+const pausePreviewButton = document.querySelector('#pause-preview-button')
+const shareSceneButton = document.querySelector('#share-scene-button')
+const audioToggleButton = document.querySelector('#audio-toggle-button')
+const replayTutorialButton = document.querySelector('#replay-tutorial-button')
+const environmentList = document.querySelector('#environment-list')
+const skipToControlsButton = document.querySelector('#skip-to-controls')
 
 // WebXR session state
 let xrSession = null
+let vrRequestState = 'idle'
+let previewPaused = false
+let vrButtonClickHandler = null
+let cleanedUp = false
 
 // Initialize Three.js renderer
 const renderer = new THREE.WebGLRenderer({
@@ -76,18 +106,15 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 0, 0)     // Center of particle space for 360° viewing
 
 // Hand tracking setup for VR (Vision Pro, Quest, etc.)
+const hands = []
 try {
-  // Create hand model factory
-  const handModelFactory = new XRHandModelFactory()
-
-  // Get hand references from renderer (will be available when VR session starts)
-  const hand1 = renderer.xr.getHand(0)
-  hand1.add(handModelFactory.createHandModel(hand1, 'mesh'))
-  scene.add(hand1)
-
-  const hand2 = renderer.xr.getHand(1)
-  hand2.add(handModelFactory.createHandModel(hand2, 'mesh'))
-  scene.add(hand2)
+  // Three.js exposes tracked joints directly; avoiding the optional mesh factory
+  // keeps hand tracking same-origin, offline-capable, and significantly smaller.
+  for (let index = 0; index < 2; index++) {
+    const hand = renderer.xr.getHand(index)
+    scene.add(hand)
+    hands.push(hand)
+  }
 
   console.log('Hand tracking initialized successfully')
 } catch (error) {
@@ -98,7 +125,9 @@ try {
 // Initialize Speed Control
 // VR-04: User-adjustable movement speed (0.25x-2.0x) with localStorage persistence
 const speedControl = new SpeedControl({
-  lerpDuration: 0.3 // 300ms smooth transitions
+  lerpDuration: 0.3,
+  initialSpeed: explicitSceneSpeed ?? undefined,
+  preferInitialSpeed: explicitSceneSpeed !== null
 })
 
 // Initialize Environment Manager
@@ -116,6 +145,41 @@ const performanceMonitor = new PerformanceMonitor({
 // VR-03: Vision Pro-style floating cards with gaze and controller selection
 // VR-04: Includes speed control panel
 const spatialUI = new SpatialUI(scene, camera, renderer, environmentManager, speedControl)
+const particleInteraction = new ParticleInteraction({
+  hands,
+  controllerInput: spatialUI.controllerInput
+})
+const audioManager = new AudioManager({
+  initialEnabled: hasExplicitAudioPreference
+    ? initialSceneState.audioEnabled
+    : undefined
+})
+
+environmentManager.onEnvironmentChange = environment => {
+  audioManager.setEnvironment(environment.id)
+  performanceMonitor.setTargets(environment.performance)
+  spatialUI.updateSelectedCard()
+  setEnvironmentSelection(environment.id)
+  syncSceneURL()
+  setStatus(`${environment.name} is active.`)
+}
+
+environmentManager.onTransitionChange = transition => {
+  const transitioning = transition.state !== 'idle'
+  environmentList?.setAttribute('aria-busy', String(transitioning))
+  if (transitioning && transition.targetEnvironmentId) {
+    setStatus(`Transitioning to ${transition.targetEnvironmentId}.`)
+  }
+}
+
+speedControl.onLerpComplete = () => {
+  syncSceneURL()
+}
+
+audioManager.onStateChange = enabled => {
+  updateAudioButton(enabled)
+  syncSceneURL()
+}
 
 // Async initialization function (avoids top-level await)
 async function initializeEnvironment() {
@@ -134,21 +198,25 @@ async function initializeEnvironment() {
       environmentManager.loadPreset('hypercube')
     ])
 
+    if (cleanedUp) return
+
     console.log('All environment presets loaded (7 total)')
 
-    // Switch to sphere preset (baseline environment as default)
-    // Note: switchEnvironment handles setting current and initializing particle system
-    await environmentManager.switchEnvironment('sphere')
+    // Activate the validated URL-selected environment (sphere by default)
+    await environmentManager.switchEnvironment(initialSceneState.environmentId, { immediate: true })
+    spatialUI.refreshUIIfNeeded?.()
+    setStatus(`${environmentManager.getCurrentEnvironment().name} preview ready.`)
 
     console.log('Environment initialized successfully')
   } catch (error) {
+    if (cleanedUp) return
     console.error('Failed to initialize environment:', error)
-    alert('Failed to load particle environment. Please refresh the page.')
+    showError('The particle environment could not be loaded. Refresh and try again.')
   }
 }
 
 // Start environment initialization
-initializeEnvironment()
+void initializeEnvironment()
 
 // Animation loop state for timestamp-based delta time
 let lastFrameTime = null
@@ -157,38 +225,40 @@ let lastFrameTime = null
 function animate(timestamp) {
   // Calculate delta time from high-resolution timestamp (VR-synchronized)
   // timestamp is in milliseconds, delta should be in seconds
-  let delta = 0
+  let delta
   if (lastFrameTime !== null) {
-    delta = (timestamp - lastFrameTime) / 1000 // Convert ms to seconds
+    delta = Math.min((timestamp - lastFrameTime) / 1000, 0.1)
   } else {
     // First frame: use default 16.67ms (60fps) as fallback
     delta = 1 / 60
   }
   lastFrameTime = timestamp
 
-  // Record frame for performance monitoring
-  performanceMonitor.recordFrame(timestamp)
-
   // Update speed control (smooth lerping transitions)
   speedControl.update(delta)
 
-  // Update particle system via environment manager
-  // VR-only: No mouse/touch interaction (immersive experience)
-  // EnvironmentManager applies speed multiplier to delta internally
-  environmentManager.update(delta, null)
-
   // Update spatial UI (gaze and controller input)
   // Get current XR session for controller tracking
-  const xrSession = renderer.xr.getSession()
-  spatialUI.update(xrSession, delta)
+  const activeXRSession = renderer.xr.getSession()
+  const interactionSources = particleInteraction.update(activeXRSession)
 
-  // Check performance every 60 frames
+  if (!previewPaused || activeXRSession) {
+    environmentManager.update(delta, interactionSources)
+    performanceMonitor.recordFrame(timestamp)
+  } else {
+    environmentManager.updateTransition(delta)
+  }
+
+  spatialUI.update(activeXRSession, delta)
+
+  // Adapt both down and up using percentile frame-time windows.
   if (performanceMonitor.shouldCheck()) {
-    if (performanceMonitor.shouldReduceQuality()) {
-      const particleSystem = environmentManager.getParticleSystem()
-      if (particleSystem) {
-        particleSystem.reduceParticleCount(0.15, 100)
-      }
+    const qualityAction = performanceMonitor.evaluateQuality()
+    const particleSystem = environmentManager.getParticleSystem()
+    if (qualityAction === 'reduce') {
+      particleSystem?.reduceParticleCount(0.15, 100)
+    } else if (qualityAction === 'increase') {
+      particleSystem?.restoreParticleCount?.(0.1)
     }
 
     performanceMonitor.reset()
@@ -214,19 +284,37 @@ window.addEventListener('resize', onWindowResize)
 
 // Cleanup on page unload
 function cleanup() {
+  if (cleanedUp) return
+  cleanedUp = true
+
   // Remove event listeners
   window.removeEventListener('resize', onWindowResize)
   window.removeEventListener('keydown', onKeyDown)
+  window.removeEventListener('keydown', onInitialTabNavigation, true)
+  pausePreviewButton?.removeEventListener('click', onPausePreview)
+  shareSceneButton?.removeEventListener('click', onShareScene)
+  audioToggleButton?.removeEventListener('click', onToggleAudio)
+  replayTutorialButton?.removeEventListener('click', onReplayTutorial)
+  environmentList?.removeEventListener('click', onEnvironmentListClick)
+  environmentList?.removeEventListener('keydown', onEnvironmentListKeyDown)
+  skipToControlsButton?.removeEventListener('click', onSkipToControls)
+  if (vrButtonClickHandler) {
+    vrButton?.removeEventListener('click', vrButtonClickHandler)
+  }
 
   // End VR session if active
   if (xrSession) {
-    endVRSession(xrSession)
+    void endVRSession(xrSession)
     xrSession = null
   }
 
   // Dispose Three.js resources
+  renderer.setAnimationLoop(null)
+  particleInteraction.dispose()
   spatialUI.dispose()
   environmentManager.dispose()
+  speedControl.dispose()
+  void audioManager.dispose()
   renderer.dispose()
 }
 
@@ -236,76 +324,317 @@ window.addEventListener('beforeunload', cleanup)
 // 'M' key toggles the spatial UI menu in VR
 function onKeyDown(event) {
   if (event.key === 'm' || event.key === 'M') {
-    spatialUI.toggle()
+    if (renderer.xr.getSession()) {
+      spatialUI.toggle()
+    }
+  } else if (event.key === 'Escape' && environmentManager.isTransitioning()) {
+    environmentManager.cancelTransition({ jumpToTarget: true })
   }
 }
 
+function onInitialTabNavigation(event) {
+  if (
+    event.key !== 'Tab'
+    || event.shiftKey
+    || !skipToControlsButton
+    || (
+      document.activeElement !== document.body
+      && document.activeElement !== document.documentElement
+    )
+  ) {
+    return
+  }
+
+  // Safari/WebKit can leave focus on the document when full keyboard access is
+  // disabled. Normalize the first forward Tab so the skip control remains usable.
+  event.preventDefault()
+  skipToControlsButton.focus()
+  window.removeEventListener('keydown', onInitialTabNavigation, true)
+}
+
+window.addEventListener('keydown', onInitialTabNavigation, true)
 window.addEventListener('keydown', onKeyDown)
 
 // VR button setup
-if (vrButton && webxrSupported) {
-  // Check VR session support asynchronously
-  isVRSessionSupported().then(supported => {
-    if (supported) {
-      // Show button if VR sessions are supported
-      vrButton.style.display = 'block'
-      console.log('VR sessions supported - button visible')
+void configureVRButton().catch(error => {
+  if (cleanedUp) return
+  console.error('Failed to configure immersive mode:', error)
+  setXRStatus('Immersive mode could not be configured. The live preview remains available.')
+})
 
-      // Handle VR button click
-      const onVRButtonClick = async () => {
-        if (!xrSession) {
-          // Request VR session
-          console.log('Requesting VR session...')
-          const session = await requestVRSession(renderer)
+async function configureVRButton() {
+  if (!vrButton) return
 
-          if (session) {
-            xrSession = session
-            vrButton.textContent = 'Exit VR'
-            console.log('VR session active')
+  vrButton.disabled = true
 
-            // Handle session end (user exits or system ends session)
-            session.addEventListener('end', () => {
-              xrSession = null
-              vrButton.textContent = 'Enter VR'
-              spatialUI.hide() // Hide UI when exiting VR
-              console.log('VR session ended by user or system')
-            })
+  if (!webxrSupported) {
+    setXRStatus('Immersive mode is unavailable here. The live preview remains available.')
+    vrButton.textContent = 'Headset unavailable'
+    return
+  }
 
-            // Handle session errors
-            session.addEventListener('error', (event) => {
-              console.error('VR session error:', event)
-            })
+  setXRStatus('Checking for an immersive headset…')
+  const supported = await isVRSessionSupported()
+  if (cleanedUp) return
+  if (!supported) {
+    setXRStatus('Immersive headset unavailable. You can still explore the live preview.')
+    vrButton.textContent = 'Headset unavailable'
+    return
+  }
 
-            // Log session info for debugging
-            console.log('Session mode:', session.mode)
-            console.log('Session features:', session.enabledFeatures)
+  setXRStatus('Immersive headset ready.')
+  vrButton.disabled = false
+  vrButtonClickHandler = () => {
+    void onVRButtonClick().catch(error => {
+      if (cleanedUp) return
+      console.error('Immersive mode action failed:', error)
+      vrRequestState = xrSession ? 'active' : 'idle'
+      vrButton.disabled = false
+      showError('Immersive mode encountered an unexpected error. Please try again.')
+    })
+  }
+  vrButton.addEventListener('click', vrButtonClickHandler)
+}
 
-            // UI starts hidden - user can look down at toggle orb to reveal UI
-            spatialUI.hide()
-            console.log('VR session active - look down for UI toggle orb')
-          } else {
-            console.error('Failed to start VR session')
-            alert('Unable to start VR session. Make sure a VR headset is connected.')
-          }
-        } else {
-          // End VR session
-          console.log('Ending VR session...')
-          await endVRSession(xrSession)
-        }
-      }
+async function onVRButtonClick() {
+  if (vrRequestState !== 'idle' && vrRequestState !== 'active') {
+    return
+  }
 
-      vrButton.addEventListener('click', onVRButtonClick)
-
-      // Add cleanup for VR button
-      const originalCleanup = cleanup
-      cleanup = function() {
-        vrButton.removeEventListener('click', onVRButtonClick)
-        originalCleanup()
-      }
-    } else {
-      console.log('VR sessions not supported - button hidden')
+  clearError()
+  if (audioManager.isEnabled()) {
+    try {
+      await audioManager.setEnabled(true)
+    } catch (error) {
+      console.warn('Unable to resume ambient audio:', error)
+      await audioManager.setEnabled(false)
     }
-  })
+  }
+
+  if (!xrSession) {
+    vrRequestState = 'requesting'
+    vrButton.disabled = true
+    setStatus('Requesting immersive mode…')
+
+    const session = await requestVRSession(renderer)
+    if (!session) {
+      vrRequestState = 'idle'
+      vrButton.disabled = false
+      showError('Immersive mode could not start. Check headset connection and browser permission.')
+      return
+    }
+
+    xrSession = session
+    vrRequestState = 'active'
+    vrButton.disabled = false
+    vrButton.textContent = 'Exit immersive mode'
+    const landingPanel = document.querySelector('#landing-panel')
+    landingPanel?.setAttribute('aria-hidden', 'true')
+    if (landingPanel) landingPanel.inert = true
+    spatialUI.hide()
+    spatialUI.startOnboarding?.()
+    performanceMonitor.reset({ resetTimestamp: true, resetAdaptiveState: true })
+    setStatus('Immersive mode active.')
+
+    session.addEventListener('end', onVRSessionEnded, { once: true })
+    session.addEventListener('error', onVRSessionError)
+    return
+  }
+
+  vrRequestState = 'ending'
+  vrButton.disabled = true
+  setStatus('Ending immersive mode…')
+  const endingSession = xrSession
+  await endVRSession(endingSession)
+  if (xrSession === endingSession) {
+    onVRSessionEnded({ currentTarget: endingSession })
+  }
+}
+
+function onVRSessionEnded(event) {
+  event?.currentTarget?.removeEventListener?.('error', onVRSessionError)
+  xrSession = null
+  if (cleanedUp) return
+
+  vrRequestState = 'idle'
+  vrButton.disabled = false
+  vrButton.textContent = 'Enter immersive mode'
+  const landingPanel = document.querySelector('#landing-panel')
+  landingPanel?.removeAttribute('aria-hidden')
+  if (landingPanel) landingPanel.inert = false
+  spatialUI.hide()
+  performanceMonitor.reset({ resetTimestamp: true, resetAdaptiveState: true })
+  setStatus('Immersive mode ended. Preview active.')
+  if (!cleanedUp) {
+    vrButton.focus({ preventScroll: true })
+  }
+}
+
+function onVRSessionError(event) {
+  console.error('VR session error:', event)
+  showError('The immersive session encountered an error and may need to be restarted.')
+}
+
+pausePreviewButton?.addEventListener('click', onPausePreview)
+shareSceneButton?.addEventListener('click', onShareScene)
+audioToggleButton?.addEventListener('click', onToggleAudio)
+replayTutorialButton?.addEventListener('click', onReplayTutorial)
+environmentList?.addEventListener('click', onEnvironmentListClick)
+environmentList?.addEventListener('keydown', onEnvironmentListKeyDown)
+skipToControlsButton?.addEventListener('click', onSkipToControls)
+
+if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+  previewPaused = true
+}
+updatePauseButton()
+updateAudioButton(audioManager.isEnabled())
+
+function onPausePreview() {
+  previewPaused = !previewPaused
+  performanceMonitor.reset({ resetTimestamp: true })
+  updatePauseButton()
+  setStatus(previewPaused ? 'Preview paused.' : 'Preview resumed.')
+}
+
+async function onShareScene() {
+  clearError()
+  try {
+    await copySceneURL(getCurrentSceneState())
+    setStatus('Scene link copied to the clipboard.')
+  } catch (error) {
+    console.warn('Unable to copy scene URL:', error)
+    showError('Clipboard access is unavailable. Copy the current address from your browser.')
+  }
+}
+
+async function onToggleAudio() {
+  clearError()
+  try {
+    const enabled = audioManager.isEnabled() && !audioManager.isActive()
+      ? await audioManager.setEnabled(true)
+      : await audioManager.toggle()
+    setStatus(enabled ? 'Ambient sound enabled.' : 'Ambient sound disabled.')
+  } catch (error) {
+    console.warn('Unable to toggle audio:', error)
+    showError('Ambient sound is unavailable in this browser.')
+  }
+}
+
+function onReplayTutorial() {
+  if (!renderer.xr.getSession()) {
+    setStatus('Enter immersive mode to view the spatial tutorial.')
+    return
+  }
+
+  spatialUI.startOnboarding?.({ force: true })
+}
+
+function onSkipToControls() {
+  document.querySelector('#landing-panel')?.focus({ preventScroll: true })
+}
+
+function onEnvironmentListClick(event) {
+  const button = event.target instanceof Element
+    ? event.target.closest('[data-environment]')
+    : null
+  if (button) {
+    void selectEnvironment(button.dataset.environment)
+  }
+}
+
+function onEnvironmentListKeyDown(event) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+    return
+  }
+
+  event.preventDefault()
+  const options = Array.from(environmentList.querySelectorAll('[data-environment]'))
+  const currentIndex = Math.max(0, options.indexOf(document.activeElement))
+  let nextIndex = currentIndex
+
+  if (event.key === 'ArrowLeft') nextIndex = Math.max(0, currentIndex - 1)
+  if (event.key === 'ArrowRight') nextIndex = Math.min(options.length - 1, currentIndex + 1)
+  if (event.key === 'Home') nextIndex = 0
+  if (event.key === 'End') nextIndex = options.length - 1
+
+  options[nextIndex]?.focus()
+  options[nextIndex]?.click()
+}
+
+async function selectEnvironment(environmentId) {
+  clearError()
+  try {
+    await environmentManager.switchEnvironment(environmentId)
+  } catch (error) {
+    console.error('Unable to switch environment:', error)
+    showError('That particle world could not be loaded. The current world remains active.')
+  }
+}
+
+function getCurrentSceneState() {
+  return {
+    environmentId: environmentManager.getCurrentEnvironment()?.id || initialSceneState.environmentId,
+    seed,
+    speed: speedControl.getTargetSpeed(),
+    audioEnabled: audioManager.isEnabled()
+  }
+}
+
+function setEnvironmentSelection(environmentId) {
+  const options = environmentList?.querySelectorAll('[data-environment]') || []
+  for (const option of options) {
+    const selected = option.dataset.environment === environmentId
+    option.classList.toggle('is-selected', selected)
+    option.setAttribute('aria-selected', String(selected))
+    option.tabIndex = selected ? 0 : -1
+  }
+}
+
+function updatePauseButton() {
+  if (!pausePreviewButton) return
+  pausePreviewButton.setAttribute('aria-pressed', String(previewPaused))
+  pausePreviewButton.textContent = previewPaused ? 'Resume preview' : 'Pause preview'
+}
+
+function updateAudioButton(enabled) {
+  if (!audioToggleButton) return
+  audioToggleButton.setAttribute('aria-pressed', String(enabled))
+  audioToggleButton.textContent = enabled
+    ? audioManager.isActive() ? 'Sound on' : 'Start sound'
+    : 'Sound off'
+}
+
+function setStatus(message) {
+  if (appStatus) appStatus.textContent = message
+}
+
+function setXRStatus(message) {
+  if (xrStatus) xrStatus.textContent = message
+}
+
+function showError(message) {
+  if (appError) {
+    appError.textContent = message
+    appError.hidden = false
+  }
+  if (renderer.xr.getSession()) {
+    spatialUI.showError?.(message)
+  }
+}
+
+function clearError() {
+  if (appError) {
+    appError.textContent = ''
+    appError.hidden = true
+  }
+}
+
+function syncSceneURL() {
+  try {
+    updateSceneURL(getCurrentSceneState())
+  } catch (error) {
+    console.warn('Unable to synchronize scene URL:', error)
+  }
 }
 
 // Start animation loop (VR-compatible via renderer.setAnimationLoop)

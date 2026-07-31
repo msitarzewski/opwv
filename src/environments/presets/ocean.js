@@ -15,13 +15,16 @@ import * as THREE from 'three'
  * Effect: Undulating water surface
  */
 
-function oceanInitialization(rng, palette, bounds) {
+function oceanInitialization(rng, palette, bounds, particleIndex, particleCount) {
   const rand = () => rng ? rng.random() : Math.random()
 
-  // Horizontal plane (XZ)
+  // Deterministic horizontal grid (XZ) so the renderer can connect the surface.
   const planeSize = 30.0
-  const x = (rand() - 0.5) * planeSize
-  const z = (rand() - 0.5) * planeSize
+  const dimension = Math.round(Math.sqrt(particleCount))
+  const gridX = particleIndex % dimension
+  const gridZ = Math.floor(particleIndex / dimension)
+  const x = (gridX / (dimension - 1) - 0.5) * planeSize
+  const z = (gridZ / (dimension - 1) - 0.5) * planeSize
 
   // Initial wave height (will be controlled by wave behavior)
   const y = Math.sin(x * 0.3) * 2.0 + Math.sin(z * 0.4) * 1.5
@@ -32,13 +35,15 @@ function oceanInitialization(rng, palette, bounds) {
   const velocity = new THREE.Vector3(
     0.5, // Slow drift in +X
     0,
-    (rand() - 0.5) * 0.2
+    0
   )
 
   // Aquatic colors
   const colors = ['#0077BE', '#00CED1', '#20B2AA', '#48D1CC', '#40E0D0', '#5F9EA0']
   const colorIndex = Math.floor(rand() * colors.length)
-  const color = new THREE.Color(colors[colorIndex])
+  const color = palette?.length
+    ? palette[colorIndex % palette.length].clone()
+    : new THREE.Color(colors[colorIndex])
 
   const size = rand() * 2 + 3 // 3-5 range
 
@@ -57,7 +62,8 @@ const oceanEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: oceanInitialization
+    initializationFn: oceanInitialization,
+    wrapMode: 'none'
   },
 
   // Wave dynamics (NO flocking)
@@ -85,7 +91,7 @@ const oceanEnvironment = {
   },
 
   visual: {
-    renderMode: 'points',
+    renderMode: 'surface',
     colorPalette: [
       '#0077BE',  // Ocean blue
       '#00CED1',  // Dark turquoise

@@ -234,7 +234,7 @@ export class SpeedControlPanel {
    * Re-renders if speed is transitioning
    * @param {number} delta - Time elapsed since last frame (seconds)
    */
-  update(delta) {
+  update(_delta) {
     // Re-render if speed is transitioning (for smooth slider animation)
     if (this.speedControl.isTransitioning()) {
       this.renderCanvas()

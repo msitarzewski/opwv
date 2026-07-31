@@ -49,20 +49,22 @@ function getTesseractEdges() {
   return edges
 }
 
-function hypercubeInitialization(rng, palette, bounds) {
+const TESSERACT_VERTICES = getTesseractVertices()
+const TESSERACT_EDGES = getTesseractEdges()
+
+function hypercubeInitialization(rng, palette, bounds, particleIndex, particleCount) {
   const rand = () => rng ? rng.random() : Math.random()
 
-  const vertices = getTesseractVertices()
-  const edges = getTesseractEdges()
-
-  // Pick random edge
-  const edgeIndex = Math.floor(rand() * edges.length)
-  const [v1Index, v2Index] = edges[edgeIndex]
+  // Distribute samples consistently across every edge.
+  const edgeIndex = particleIndex % TESSERACT_EDGES.length
+  const [v1Index, v2Index] = TESSERACT_EDGES[edgeIndex]
 
   // Position along edge
-  const t = rand()
-  const v1 = vertices[v1Index]
-  const v2 = vertices[v2Index]
+  const samplesPerEdge = Math.ceil(particleCount / TESSERACT_EDGES.length)
+  const sampleIndex = Math.floor(particleIndex / TESSERACT_EDGES.length)
+  const t = samplesPerEdge > 1 ? sampleIndex / (samplesPerEdge - 1) : 0
+  const v1 = TESSERACT_VERTICES[v1Index]
+  const v2 = TESSERACT_VERTICES[v2Index]
 
   // Interpolate in 4D
   const point4D = new Vector4D(
@@ -73,7 +75,7 @@ function hypercubeInitialization(rng, palette, bounds) {
   )
 
   // Project to 3D
-  const position = point4D.projectTo3D(2.5)
+  const position = point4D.projectTo3D(12)
 
   // Velocity will be calculated by rotation behavior
   const velocity = new THREE.Vector3(0, 0, 0)
@@ -85,7 +87,15 @@ function hypercubeInitialization(rng, palette, bounds) {
   const size = rand() * 2 + 2.5 // 2.5-4.5
 
   // Store 4D position for rotation behavior
-  return { position, velocity, color, size, rotation4D: point4D }
+  return {
+    position,
+    velocity,
+    color,
+    size,
+    rotation4D: point4D,
+    connectionGroup: edgeIndex,
+    connectionOrder: t
+  }
 }
 
 const hypercubeEnvironment = {
@@ -100,7 +110,8 @@ const hypercubeEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: hypercubeInitialization
+    initializationFn: hypercubeInitialization,
+    wrapMode: 'none'
   },
 
   // Pure 4D rotation (NO flocking)
@@ -123,12 +134,12 @@ const hypercubeEnvironment = {
       rotationSpeedXW: 0.3,      // XW plane rotation
       rotationSpeedYW: 0.2,      // YW plane rotation
       rotationSpeedZW: 0.15,     // ZW plane rotation
-      projectionDistance: 2.5    // 4D projection distance
+      projectionDistance: 12     // Stays beyond the tesseract's W extent
     }
   },
 
   visual: {
-    renderMode: 'points',
+    renderMode: 'hypercube',
     colorPalette: null,          // Rainbow hue rotation (handled in initFn)
     particleSize: 3,
     opacity: 0.8,

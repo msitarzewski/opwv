@@ -5,7 +5,7 @@ import { pickColorFromPalette } from '../utils/colors.js'
 export class Particle {
   /**
    * Create a particle with random properties
-   * @param {Object} bounds - {minX, maxX, minY, maxY} for 2D or {innerRadius, outerRadius} for 3D spherical
+   * @param {Object} bounds - {innerRadius, outerRadius} spherical bounds
    * @param {SeededRandom} rng - Optional seeded random number generator
    * @param {THREE.Color[]} palette - Optional color palette to pick from
    */
@@ -13,60 +13,34 @@ export class Particle {
     // Use seeded RNG if provided, otherwise Math.random()
     const rand = () => rng ? rng.random() : Math.random()
 
-    // Check if bounds are spherical (3D) or planar (2D)
-    const isSpherical = bounds.innerRadius !== undefined && bounds.outerRadius !== undefined
-
-    if (isSpherical) {
-      // Spherical initialization: Distribute particles in 3D spherical volume
-      // Use spherical coordinates (r, theta, phi) then convert to Cartesian (x, y, z)
-
-      // Random radius between inner and outer radius
-      const r = rand() * (bounds.outerRadius - bounds.innerRadius) + bounds.innerRadius
-
-      // Random azimuth angle (theta): 0 to 2π (full rotation around Z axis)
-      const theta = rand() * Math.PI * 2
-
-      // Random polar angle (phi): 0 to π (from north to south pole)
-      const phi = rand() * Math.PI
-
-      // Convert spherical to Cartesian coordinates
-      // x = r * sin(phi) * cos(theta)
-      // y = r * sin(phi) * sin(theta)
-      // z = r * cos(phi)
-      this.position = new THREE.Vector3(
-        r * Math.sin(phi) * Math.cos(theta),
-        r * Math.sin(phi) * Math.sin(theta),
-        r * Math.cos(phi)
-      )
-
-      // Velocity (Vector3) - 3D random values for spatial motion
-      this.velocity = new THREE.Vector3(
-        (rand() - 0.5) * 1.0, // -0.5 to 0.5 units per second
-        (rand() - 0.5) * 1.0,
-        (rand() - 0.5) * 1.0  // Include Z velocity for 3D motion
-      )
-    } else {
-      // Planar initialization: 2D rectangle (backward compatibility)
-      this.position = new THREE.Vector3(
-        rand() * (bounds.maxX - bounds.minX) + bounds.minX,
-        rand() * (bounds.maxY - bounds.minY) + bounds.minY,
-        0 // Z = 0 for 2D-style orthographic view
-      )
-
-      // Velocity (Vector3) - 2D motion only
-      this.velocity = new THREE.Vector3(
-        (rand() - 0.5) * 1.0, // -0.5 to 0.5 units per second
-        (rand() - 0.5) * 1.0,
-        0
-      )
+    if (!Number.isFinite(bounds?.innerRadius) || !Number.isFinite(bounds?.outerRadius)) {
+      throw new Error('Particle requires spherical innerRadius and outerRadius bounds')
     }
+
+    const r = rand() * (bounds.outerRadius - bounds.innerRadius) + bounds.innerRadius
+    const theta = rand() * Math.PI * 2
+    // Uniform sphere sampling avoids clustering at the poles.
+    const cosPhi = rand() * 2 - 1
+    const sinPhi = Math.sqrt(1 - cosPhi * cosPhi)
+
+    this.position = new THREE.Vector3(
+      r * sinPhi * Math.cos(theta),
+      r * sinPhi * Math.sin(theta),
+      r * cosPhi
+    )
+
+    this.velocity = new THREE.Vector3(
+      (rand() - 0.5) * 1.0,
+      (rand() - 0.5) * 1.0,
+      (rand() - 0.5) * 1.0
+    )
 
     // Color - pick from palette if provided, otherwise random RGB
     if (palette && rng) {
       // Pick random color from palette using seeded RNG
       this.color = pickColorFromPalette(palette, rng)
     } else {
-      // Fallback to random RGB (backward compatibility)
+      // Fallback when a palette is not configured.
       this.color = new THREE.Color(
         rand(),
         rand(),

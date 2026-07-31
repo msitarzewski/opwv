@@ -1,6 +1,6 @@
 # Memory Bank Table of Contents
 
-**Last Updated**: 2025-10-25
+**Last Updated**: 2026-07-31
 
 ## Core Documentation
 
@@ -23,6 +23,10 @@
 
 ### 2025-10
 - [tasks/2025-10/README.md](./tasks/2025-10/README.md) - October tasks summary
+
+### 2026-07
+- [tasks/2026-07/README.md](./tasks/2026-07/README.md) - Full experience upgrade summary
+- [tasks/2026-07/310726_full-experience-upgrade.md](./tasks/2026-07/310726_full-experience-upgrade.md) - Approved integrated upgrade
 
 ## Navigation Guide
 

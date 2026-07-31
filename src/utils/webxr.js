@@ -1,6 +1,15 @@
 // WebXR utilities for VR mode detection and setup
 // Provides WebXR capability checks and URL parameter parsing for VR mode entry
 
+const OPTIONAL_SESSION_FEATURES = Object.freeze([
+  'local-floor',
+  'bounded-floor',
+  'hand-tracking'
+])
+
+let pendingSessionRequest = null
+const pendingSessionEnds = new WeakMap()
+
 /**
  * Parse VR mode from URL parameter
  * @returns {boolean} True if ?mode=vr is present in URL
@@ -12,6 +21,7 @@
  * getVRModeFromURL() // returns false
  */
 export function getVRModeFromURL() {
+  if (typeof window === 'undefined') return false
   const params = new URLSearchParams(window.location.search)
   const mode = params.get('mode')
   return mode === 'vr'
@@ -22,7 +32,23 @@ export function getVRModeFromURL() {
  * @returns {boolean} True if navigator.xr exists
  */
 export function isWebXRSupported() {
-  return 'xr' in navigator
+  return typeof window !== 'undefined' &&
+    window.isSecureContext === true &&
+    typeof navigator !== 'undefined' &&
+    'xr' in navigator
+}
+
+/**
+ * Explain why immersive mode is unavailable without exposing raw browser errors.
+ * @returns {'supported'|'insecure-context'|'api-unavailable'}
+ */
+export function getWebXRSupportStatus() {
+  if (typeof window === 'undefined' || window.isSecureContext !== true) {
+    return 'insecure-context'
+  }
+  return typeof navigator !== 'undefined' && 'xr' in navigator
+    ? 'supported'
+    : 'api-unavailable'
 }
 
 /**
@@ -53,6 +79,14 @@ export async function isVRSessionSupported() {
  * @returns {Object} Browser name and WebXR support status
  */
 export function getBrowserInfo() {
+  if (typeof navigator === 'undefined') {
+    return {
+      browser: 'Unknown',
+      webxrSupported: false,
+      supportStatus: getWebXRSupportStatus()
+    }
+  }
+
   const ua = navigator.userAgent
   let browser = 'Unknown'
 
@@ -68,7 +102,8 @@ export function getBrowserInfo() {
 
   return {
     browser,
-    webxrSupported: isWebXRSupported()
+    webxrSupported: isWebXRSupported(),
+    supportStatus: getWebXRSupportStatus()
   }
 }
 
@@ -88,19 +123,46 @@ export async function requestVRSession(renderer) {
     return null
   }
 
+  if (!renderer?.xr || typeof renderer.xr.setSession !== 'function') {
+    console.error('WebXR renderer is not initialized')
+    return null
+  }
+
+  const activeSession = renderer.xr.getSession?.()
+  if (activeSession) {
+    return activeSession
+  }
+
+  // Coalesce rapid activation attempts into one permission/session request.
+  if (pendingSessionRequest) return pendingSessionRequest
+
+  pendingSessionRequest = startVRSession(renderer)
   try {
-    // Request immersive VR session with optional features
-    // hand-tracking: Required for Vision Pro natural input (pinch gestures)
-    const session = await navigator.xr.requestSession('immersive-vr', {
-      optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+    return await pendingSessionRequest
+  } finally {
+    pendingSessionRequest = null
+  }
+}
+
+async function startVRSession(renderer) {
+  let session = null
+  try {
+    session = await navigator.xr.requestSession('immersive-vr', {
+      optionalFeatures: [...OPTIONAL_SESSION_FEATURES]
     })
 
-    // Connect session to Three.js WebXRManager
     await renderer.xr.setSession(session)
-    console.log('VR session started successfully')
     return session
   } catch (error) {
-    console.error('Failed to start VR session:', error.message)
+    // A session can be created before renderer setup fails; release it promptly.
+    if (session) {
+      try {
+        await session.end()
+      } catch {
+        // Preserve the original setup failure.
+      }
+    }
+    console.error('Failed to start VR session:', error instanceof Error ? error.message : 'Unknown error')
     return null
   }
 }
@@ -119,10 +181,24 @@ export async function endVRSession(session) {
     return
   }
 
-  try {
-    await session.end()
-    console.log('VR session ended gracefully')
-  } catch (error) {
-    console.warn('Error ending VR session:', error.message)
-  }
+  const existingEnd = pendingSessionEnds.get(session)
+  if (existingEnd) return existingEnd
+
+  const endPromise = (async () => {
+    try {
+      await session.end()
+    } catch (error) {
+      const invalidState = typeof DOMException !== 'undefined' &&
+        error instanceof DOMException &&
+        error.name === 'InvalidStateError'
+      if (!invalidState) {
+        console.warn('Error ending VR session:', error instanceof Error ? error.message : 'Unknown error')
+      }
+    } finally {
+      pendingSessionEnds.delete(session)
+    }
+  })()
+
+  pendingSessionEnds.set(session, endPromise)
+  return endPromise
 }

@@ -3,6 +3,17 @@
 
 import { ParticleSystem } from '../particles/ParticleSystem.js'
 import { Environment } from './Environment.js'
+import * as THREE from 'three'
+
+const PRESET_LOADERS = Object.freeze({
+  sphere: () => import('./presets/sphere.js'),
+  nebula: () => import('./presets/nebula.js'),
+  galaxy: () => import('./presets/galaxy.js'),
+  lattice: () => import('./presets/lattice.js'),
+  vortex: () => import('./presets/vortex.js'),
+  ocean: () => import('./presets/ocean.js'),
+  hypercube: () => import('./presets/hypercube.js')
+})
 
 /**
  * EnvironmentManager class - Manages multiple environments and particle system lifecycle
@@ -32,8 +43,35 @@ export class EnvironmentManager {
 
     // Environment state
     this.availableEnvironments = new Map() // presetId -> Environment
+    this.loadingPresets = new Map()
     this.currentEnvironment = null
     this.particleSystem = null
+    this.disposed = false
+
+    // Comfortable fade transition state
+    this.transitionState = 'idle'
+    this.transitionElapsed = 0
+    this.transitionDuration = 0.35
+    this.activeTransition = null
+    this.queuedTransition = null
+    this.onEnvironmentChange = null
+    this.onTransitionChange = null
+
+    this.fadeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0,
+      side: THREE.BackSide,
+      depthTest: false,
+      depthWrite: false
+    })
+    this.fadeMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.5, 16, 12),
+      this.fadeMaterial
+    )
+    this.fadeMesh.visible = false
+    this.fadeMesh.renderOrder = 10000
+    this.scene.add(this.fadeMesh)
   }
 
   /**
@@ -43,23 +81,55 @@ export class EnvironmentManager {
    * @throws {Error} If preset cannot be loaded
    */
   async loadPreset(presetId) {
-    try {
-      // Dynamic import from presets directory
-      const presetModule = await import(`./presets/${presetId}.js`)
-      const presetConfig = presetModule.default
+    if (this.disposed) {
+      throw new Error('EnvironmentManager has been disposed')
+    }
 
-      // Create Environment instance from preset config
-      const environment = new Environment(presetConfig)
+    if (!Object.hasOwn(PRESET_LOADERS, presetId)) {
+      throw new Error(`Unknown environment preset '${String(presetId)}'`)
+    }
+    const loader = PRESET_LOADERS[presetId]
 
-      // Store in available environments
-      this.availableEnvironments.set(presetId, environment)
+    if (this.availableEnvironments.has(presetId)) {
+      return this.availableEnvironments.get(presetId)
+    }
 
-      console.log(`Environment preset loaded: ${presetId} (${environment.name})`)
+    if (this.loadingPresets.has(presetId)) {
+      return this.loadingPresets.get(presetId)
+    }
 
-      return environment
-    } catch (error) {
-      console.error(`Failed to load environment preset: ${presetId}`, error)
-      throw new Error(`Environment preset '${presetId}' not found or invalid`)
+    const loadPromise = (async () => {
+      try {
+        const presetModule = await loader()
+        if (this.disposed) {
+          throw new Error('EnvironmentManager was disposed while loading a preset')
+        }
+        const presetConfig = presetModule.default
+
+        // Create Environment instance from preset config
+        const environment = new Environment(presetConfig)
+
+        // Store in available environments
+        this.availableEnvironments.set(presetId, environment)
+
+        console.log(`Environment preset loaded: ${presetId} (${environment.name})`)
+
+        return environment
+      } catch (error) {
+        console.error(`Failed to load environment preset: ${presetId}`, error)
+        throw new Error(`Environment preset '${presetId}' not found or invalid`, { cause: error })
+      } finally {
+        this.loadingPresets.delete(presetId)
+      }
+    })()
+
+    this.loadingPresets.set(presetId, loadPromise)
+    return loadPromise
+  }
+
+  assertUsable() {
+    if (this.disposed) {
+      throw new Error('EnvironmentManager has been disposed')
     }
   }
 
@@ -88,7 +158,9 @@ export class EnvironmentManager {
    * Note: Current implementation does immediate switch (no transition animation)
    * VR-07 will add transition effects (fade, particle morphing, etc.)
    */
-  async switchEnvironment(presetId) {
+  async switchEnvironment(presetId, options = {}) {
+    this.assertUsable()
+
     // Check if preset is loaded
     if (!this.availableEnvironments.has(presetId)) {
       // Attempt to load preset if not already available
@@ -101,16 +173,65 @@ export class EnvironmentManager {
       throw new Error(`Environment '${presetId}' could not be loaded`)
     }
 
-    // Destroy current particle system
-    this.destroyParticleSystem()
+    if (this.currentEnvironment?.id === presetId && this.transitionState === 'idle') {
+      return false
+    }
 
-    // Set new environment as current
+    if (!this.currentEnvironment || options.immediate) {
+      if (this.transitionState !== 'idle' || this.queuedTransition) {
+        this.cancelTransition()
+      }
+      this.activateEnvironment(newEnvironment)
+      return true
+    }
+
+    if (this.transitionState !== 'idle') {
+      return this.queueEnvironmentSwitch(newEnvironment)
+    }
+
+    return this.beginTransition(newEnvironment)
+  }
+
+  beginTransition(environment) {
+    return new Promise((resolve, reject) => {
+      this.activeTransition = { environment, resolve, reject }
+      this.transitionState = 'fadeOut'
+      this.transitionElapsed = 0
+      this.fadeMesh.visible = true
+      this.fadeMaterial.opacity = 0
+      this.onTransitionChange?.(this.getTransitionStatus())
+    })
+  }
+
+  queueEnvironmentSwitch(environment) {
+    if (this.queuedTransition) {
+      this.queuedTransition.resolve(false)
+    }
+
+    return new Promise((resolve, reject) => {
+      this.queuedTransition = { environment, resolve, reject }
+    })
+  }
+
+  activateEnvironment(newEnvironment) {
+    const environmentRng = this.rng?.derive
+      ? this.rng.derive(newEnvironment.id)
+      : this.rng
+    const nextParticleSystem = new ParticleSystem(newEnvironment, null, environmentRng)
+    const previousParticleSystem = this.particleSystem
+
+    this.scene.add(nextParticleSystem.getPoints())
+    this.particleSystem = nextParticleSystem
     this.currentEnvironment = newEnvironment
 
-    // Initialize new particle system from environment
-    this.initializeParticleSystem()
+    if (previousParticleSystem) {
+      this.scene.remove(previousParticleSystem.getPoints())
+      previousParticleSystem.dispose()
+    }
 
-    console.log(`Switched to environment: ${presetId} (${newEnvironment.name})`)
+    this.onEnvironmentChange?.(newEnvironment)
+
+    console.log(`Switched to environment: ${newEnvironment.id} (${newEnvironment.name})`)
   }
 
   /**
@@ -124,10 +245,7 @@ export class EnvironmentManager {
     }
 
     // Create particle system from environment configuration
-    this.particleSystem = new ParticleSystem(this.currentEnvironment, null, this.rng)
-
-    // Add particle Points mesh to scene
-    this.scene.add(this.particleSystem.getPoints())
+    this.activateEnvironment(this.currentEnvironment)
 
     console.log(`Particle system initialized: ${this.currentEnvironment.spatial.particleCount} particles`)
   }
@@ -164,6 +282,8 @@ export class EnvironmentManager {
    * @param {Object|null} mousePosition - Mouse position in world coordinates
    */
   update(delta, mousePosition = null) {
+    this.updateTransition(delta)
+
     if (this.particleSystem) {
       // Apply speed multiplier if speed control is available
       const adjustedDelta = this.speedControl
@@ -174,15 +294,149 @@ export class EnvironmentManager {
     }
   }
 
+  updateTransition(delta) {
+    this.fadeMesh.position.copy(this.camera.position)
+
+    if (this.transitionState === 'idle' || !this.activeTransition) {
+      return
+    }
+
+    this.transitionElapsed += Math.max(0, Math.min(delta, 0.1))
+    const progress = Math.min(1, this.transitionElapsed / this.transitionDuration)
+
+    if (this.transitionState === 'fadeOut') {
+      this.fadeMaterial.opacity = easeInOut(progress)
+
+      if (progress >= 1) {
+        try {
+          this.activateEnvironment(this.activeTransition.environment)
+          this.transitionState = 'fadeIn'
+          this.transitionElapsed = 0
+          this.onTransitionChange?.(this.getTransitionStatus())
+        } catch (error) {
+          this.failTransition(error)
+        }
+      }
+      return
+    }
+
+    this.fadeMaterial.opacity = 1 - easeInOut(progress)
+    if (progress >= 1) {
+      this.completeTransition()
+    }
+  }
+
+  completeTransition() {
+    const completedTransition = this.activeTransition
+    this.activeTransition = null
+    this.transitionState = 'idle'
+    this.transitionElapsed = 0
+    this.fadeMaterial.opacity = 0
+    this.fadeMesh.visible = false
+    completedTransition?.resolve(true)
+    this.onTransitionChange?.(this.getTransitionStatus())
+
+    const queuedTransition = this.queuedTransition
+    this.queuedTransition = null
+    if (queuedTransition) {
+      if (queuedTransition.environment.id === this.currentEnvironment?.id) {
+        queuedTransition.resolve(false)
+      } else {
+        this.beginTransition(queuedTransition.environment)
+          .then(queuedTransition.resolve, queuedTransition.reject)
+      }
+    }
+  }
+
+  failTransition(error) {
+    const failedTransition = this.activeTransition
+    this.activeTransition = null
+    this.transitionState = 'idle'
+    this.fadeMaterial.opacity = 0
+    this.fadeMesh.visible = false
+    failedTransition?.reject(error)
+    if (this.queuedTransition) {
+      this.queuedTransition.reject(error)
+      this.queuedTransition = null
+    }
+    this.onTransitionChange?.(this.getTransitionStatus())
+  }
+
+  cancelTransition({ jumpToTarget = false } = {}) {
+    let cancelled = false
+
+    if (this.activeTransition && jumpToTarget) {
+      try {
+        this.activateEnvironment(this.activeTransition.environment)
+      } catch (error) {
+        this.failTransition(error)
+        return false
+      }
+    }
+
+    if (this.activeTransition) {
+      const cancelledTransition = this.activeTransition
+      this.activeTransition = null
+      cancelledTransition.resolve(false)
+      cancelled = true
+    }
+
+    if (this.queuedTransition) {
+      this.queuedTransition.resolve(false)
+      this.queuedTransition = null
+      cancelled = true
+    }
+
+    if (cancelled) {
+      this.transitionState = 'idle'
+      this.transitionElapsed = 0
+      this.fadeMaterial.opacity = 0
+      this.fadeMesh.visible = false
+      this.onTransitionChange?.(this.getTransitionStatus())
+    }
+
+    return cancelled
+  }
+
+  isTransitioning() {
+    return this.transitionState !== 'idle'
+  }
+
+  getTransitionStatus() {
+    return {
+      state: this.transitionState,
+      targetEnvironmentId: this.activeTransition?.environment.id || null,
+      progress: this.transitionState === 'idle'
+        ? 0
+        : Math.min(1, this.transitionElapsed / this.transitionDuration)
+    }
+  }
+
   /**
    * Dispose all resources
    * Cleans up particle system and environment references
    */
   dispose() {
+    if (this.disposed) return
+
+    this.cancelTransition()
+    this.disposed = true
     this.destroyParticleSystem()
     this.availableEnvironments.clear()
+    this.loadingPresets.clear()
     this.currentEnvironment = null
+    this.onEnvironmentChange = null
+    this.onTransitionChange = null
+    this.scene.remove(this.fadeMesh)
+    this.fadeMesh.geometry.dispose()
+    this.fadeMaterial.dispose()
 
     console.log('EnvironmentManager disposed')
   }
+}
+
+function easeInOut(value) {
+  return value < 0.5
+    ? 2 * value * value
+    : 1 - Math.pow(-2 * value + 2, 2) / 2
 }

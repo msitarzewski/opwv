@@ -21,7 +21,13 @@ export class SpeedControl {
     this.minSpeed = 0.25
     this.maxSpeed = 2.0
     this.defaultSpeed = 1.0
-    this.lerpDuration = options.lerpDuration || 0.3 // seconds
+    this.lerpDuration = Number.isFinite(options.lerpDuration) && options.lerpDuration > 0
+      ? options.lerpDuration
+      : 0.3
+    this.storage = Object.hasOwn(options, 'storage')
+      ? options.storage
+      : getSafeLocalStorage()
+    this.storageKey = 'opwv_speed_multiplier'
 
     // Speed state
     this.targetSpeed = this.defaultSpeed
@@ -44,7 +50,14 @@ export class SpeedControl {
     this.onLerpComplete = null // Called when lerp finishes
 
     // Load persisted speed from localStorage
-    this.loadFromStorage()
+    const hasInitialSpeed = Number.isFinite(options.initialSpeed)
+    const preferInitialSpeed = options.preferInitialSpeed === true && hasInitialSpeed
+    const storedSpeed = preferInitialSpeed ? null : this.loadFromStorage()
+    if ((storedSpeed === null || preferInitialSpeed) && hasInitialSpeed) {
+      const initialSpeed = Math.max(this.minSpeed, Math.min(this.maxSpeed, options.initialSpeed))
+      this.currentSpeed = initialSpeed
+      this.targetSpeed = initialSpeed
+    }
 
     console.log(`SpeedControl initialized: ${this.currentSpeed}x`)
   }
@@ -54,11 +67,15 @@ export class SpeedControl {
    * @param {number} speed - Target speed multiplier (0.25 - 2.0)
    */
   setSpeed(speed) {
+    if (!Number.isFinite(speed)) {
+      throw new TypeError('Speed must be a finite number')
+    }
+
     // Clamp to valid range
     const clampedSpeed = Math.max(this.minSpeed, Math.min(this.maxSpeed, speed))
 
     if (clampedSpeed === this.targetSpeed) {
-      return // No change needed
+      return false
     }
 
     // Start lerping from current speed to target
@@ -71,6 +88,7 @@ export class SpeedControl {
     this.saveToStorage()
 
     console.log(`Speed changing: ${this.currentSpeed.toFixed(2)}x → ${this.targetSpeed.toFixed(2)}x`)
+    return true
   }
 
   /**
@@ -79,9 +97,10 @@ export class SpeedControl {
    */
   setPreset(presetName) {
     if (this.presets[presetName] !== undefined) {
-      this.setSpeed(this.presets[presetName])
+      return this.setSpeed(this.presets[presetName])
     } else {
       console.warn(`Unknown preset: ${presetName}`)
+      return false
     }
   }
 
@@ -114,8 +133,8 @@ export class SpeedControl {
    * @param {number} delta - Time elapsed since last frame (seconds)
    */
   update(delta) {
-    if (!this.isLerping) {
-      return // No transition in progress
+    if (!this.isLerping || !Number.isFinite(delta) || delta <= 0) {
+      return false
     }
 
     // Increment lerp timer
@@ -149,6 +168,8 @@ export class SpeedControl {
 
       console.log(`Speed transition complete: ${this.currentSpeed.toFixed(2)}x`)
     }
+
+    return true
   }
 
   /**
@@ -156,18 +177,21 @@ export class SpeedControl {
    */
   loadFromStorage() {
     try {
-      const stored = localStorage.getItem('opwv_speed_multiplier')
-      if (stored !== null) {
-        const speed = parseFloat(stored)
-        if (!isNaN(speed) && speed >= this.minSpeed && speed <= this.maxSpeed) {
+      const stored = this.storage?.getItem(this.storageKey)
+      if (stored !== null && stored.length <= 8 && /^(?:\d+|\d+\.\d+)$/.test(stored)) {
+        const speed = Number(stored)
+        if (Number.isFinite(speed) && speed >= this.minSpeed && speed <= this.maxSpeed) {
           this.currentSpeed = speed
           this.targetSpeed = speed
           console.log(`Speed loaded from localStorage: ${speed}x`)
+          return speed
         }
       }
     } catch (error) {
       console.warn('Failed to load speed from localStorage:', error)
     }
+
+    return null
   }
 
   /**
@@ -175,7 +199,7 @@ export class SpeedControl {
    */
   saveToStorage() {
     try {
-      localStorage.setItem('opwv_speed_multiplier', this.targetSpeed.toString())
+      this.storage?.setItem(this.storageKey, this.targetSpeed.toString())
     } catch (error) {
       console.warn('Failed to save speed to localStorage:', error)
     }
@@ -185,7 +209,7 @@ export class SpeedControl {
    * Reset speed to default (1.0x)
    */
   reset() {
-    this.setSpeed(this.defaultSpeed)
+    return this.setSpeed(this.defaultSpeed)
   }
 
   /**
@@ -194,5 +218,18 @@ export class SpeedControl {
    */
   getPresets() {
     return { ...this.presets }
+  }
+
+  dispose() {
+    this.onSpeedChange = null
+    this.onLerpComplete = null
+  }
+}
+
+function getSafeLocalStorage() {
+  try {
+    return globalThis.localStorage
+  } catch {
+    return null
   }
 }

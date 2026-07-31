@@ -8,6 +8,7 @@ import { ControllerInput } from './ControllerInput.js'
 import { SpeedControlPanel } from './SpeedControlPanel.js'
 import { GazeCursor } from './GazeCursor.js'
 import { UIToggleOrb } from './UIToggleOrb.js'
+import { OnboardingPanel } from './OnboardingPanel.js'
 
 /**
  * SpatialUI class - Manages VR spatial UI for environment selection
@@ -42,6 +43,8 @@ export class SpatialUI {
     this.cardMeshes = []
     this.speedPanel = null
     this.allInteractableMeshes = [] // Combined cards + speed panel meshes
+    this.presetSignature = null
+    this.errorDisplayTimer = 0
 
     // UI container group (for easy show/hide)
     this.uiGroup = new THREE.Group()
@@ -75,6 +78,20 @@ export class SpatialUI {
     this.toggleOrb = new UIToggleOrb(() => this.toggle())
     this.toggleOrb.setPosition(new THREE.Vector3(0, -3.5, -5.0)) // Further down and back (out of peripheral vision)
     this.scene.add(this.toggleOrb.getMesh()) // Add to scene, NOT uiGroup (always visible)
+    this.controllerInput.setToggleOrb(this.toggleOrb)
+
+    // Reuse raycasting objects in the render loop.
+    this.orbRaycaster = new THREE.Raycaster()
+    this.orbRaycaster.far = 100
+    this.orbCenter = new THREE.Vector2(0, 0)
+    this.orbTargets = [this.toggleOrb.getMesh()]
+    this.orbDwellTimer = 0
+    this.orbDwellArmed = true
+
+    // First-run guidance also doubles as transient spatial error feedback.
+    this.onboardingPanel = new OnboardingPanel()
+    this.onboardingPanel.setPosition(new THREE.Vector3(0, 1.45, -3.25))
+    this.uiGroup.add(this.onboardingPanel.getMesh())
 
     // Set selection callbacks
     this.gazeController.setOnSelect((event) => this.onSelection(event))
@@ -88,9 +105,10 @@ export class SpatialUI {
    * Initialize UI with available environments
    * Creates cards for each loaded environment
    */
-  async initializeUI() {
+  initializeUI() {
     // Get available environments from manager
     const availableEnvironments = this.environmentManager.getAvailableEnvironments()
+    this.presetSignature = Array.from(availableEnvironments.keys()).join('|')
 
     // Clear existing cards
     this.clearCards()
@@ -126,7 +144,7 @@ export class SpatialUI {
     }
 
     // Create speed control panel if speedControl is available
-    if (this.speedControl) {
+    if (this.speedControl && !this.speedPanel) {
       this.speedPanel = new SpeedControlPanel(this.speedControl)
       // Uses default size: 2.5 x 0.8 world units
 
@@ -151,6 +169,21 @@ export class SpatialUI {
     this.updateSelectedCard()
 
     console.log(`SpatialUI initialized: ${this.cards.length} environment cards${this.speedPanel ? ' + speed panel' : ''}`)
+  }
+
+  /**
+   * Refresh cards only when the manager's preset set has changed.
+   * @returns {boolean} Whether a rebuild was required
+   */
+  refreshUIIfNeeded() {
+    const signature = Array.from(this.environmentManager.getAvailableEnvironments().keys()).join('|')
+    if (signature === this.presetSignature) {
+      this.updateSelectedCard()
+      return false
+    }
+
+    this.initializeUI()
+    return true
   }
 
   /**
@@ -221,13 +254,14 @@ export class SpatialUI {
 
       // Update selected card visual state
       this.updateSelectedCard()
+      this.dismissOnboarding()
 
       // Keep UI visible so user can select other environments
       // (Don't auto-hide - user can manually hide with gesture/button)
       console.log('Environment switched - UI staying visible for further selection')
     } catch (error) {
       console.error('Failed to switch environment:', error)
-      // TODO: Show error feedback in VR (future enhancement)
+      this.showError('That world could not be loaded. Choose another world or try again.')
     }
   }
 
@@ -246,8 +280,8 @@ export class SpatialUI {
       // Update toggle orb visual state
       this.toggleOrb.setUIVisible(true)
 
-      // Refresh UI (in case environments changed)
-      this.initializeUI()
+      // Refresh only when environments changed; preserve reusable panel resources.
+      this.refreshUIIfNeeded()
 
       console.log('SpatialUI shown')
     }
@@ -295,6 +329,19 @@ export class SpatialUI {
     // ALWAYS check orb interaction (regardless of UI visibility)
     this.updateOrbInteraction(xrSession, delta)
 
+    // Controller/pinch selection for the orb remains active while panels are hidden.
+    this.controllerInput.update(xrSession, this.allInteractableMeshes)
+
+    if (this.onboardingPanel) {
+      this.onboardingPanel.update(this.camera)
+      if (this.errorDisplayTimer > 0) {
+        this.errorDisplayTimer = Math.max(0, this.errorDisplayTimer - delta)
+        if (this.errorDisplayTimer === 0) {
+          this.onboardingPanel.hide()
+        }
+      }
+    }
+
     // Early return if UI panels are hidden (skip card/panel updates)
     if (!this.visible) {
       return
@@ -323,9 +370,6 @@ export class SpatialUI {
       this.speedPanel.update(delta)
     }
 
-    // Update controller input with all interactable meshes
-    this.controllerInput.update(xrSession, this.allInteractableMeshes)
-
     // Handle speed panel interactions
     this.handleSpeedPanelInteractions()
   }
@@ -336,40 +380,68 @@ export class SpatialUI {
    * @param {number} delta - Time delta
    */
   updateOrbInteraction(xrSession, delta) {
-    // Raycast against orb's invisible hit sphere (larger for easier targeting)
-    const orbMeshes = [this.toggleOrb.getMesh()]
-
-    // Raycast from camera (gaze)
-    const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera)
+    // Raycast from camera (gaze) using cached objects to avoid frame allocations.
+    this.orbRaycaster.setFromCamera(this.orbCenter, this.camera)
 
     // Raycast with recursive=true to hit child objects (hit sphere)
-    const intersects = raycaster.intersectObjects(orbMeshes, true)
+    const intersects = this.orbRaycaster.intersectObjects(this.orbTargets, true)
 
     if (intersects.length > 0) {
       // Hovering over orb
       this.toggleOrb.setHovered(true)
 
-      // Accumulate dwell time
-      if (!this.orbDwellTimer) this.orbDwellTimer = 0
-      this.orbDwellTimer += delta
+      if (this.orbDwellArmed) {
+        this.orbDwellTimer += delta
+      }
 
       const dwellProgress = Math.min(1.0, this.orbDwellTimer / 0.8)
       this.toggleOrb.setDwellProgress(dwellProgress)
 
       // Trigger toggle after 0.8s
-      if (this.orbDwellTimer >= 0.8) {
+      if (this.orbDwellArmed && this.orbDwellTimer >= 0.8) {
         this.toggleOrb.trigger()
         this.orbDwellTimer = 0
+        this.orbDwellArmed = false
       }
     } else {
       // Not hovering
       this.toggleOrb.setHovered(false)
       this.toggleOrb.setDwellProgress(0)
       this.orbDwellTimer = 0
+      this.orbDwellArmed = true
     }
+  }
 
-    // TODO: Add controller input for orb (pinch to toggle)
+  /**
+   * Show first-run spatial guidance and the environment UI.
+   * @param {Object} options
+   * @param {boolean} options.force - Replay even if previously completed
+   * @returns {boolean} Whether guidance was shown
+   */
+  startOnboarding({ force = false } = {}) {
+    if (!this.onboardingPanel) return false
+    const shown = this.onboardingPanel.show(force)
+    if (shown) this.show()
+    return shown
+  }
+
+  /**
+   * Complete and hide first-run guidance.
+   */
+  dismissOnboarding() {
+    this.errorDisplayTimer = 0
+    this.onboardingPanel?.complete()
+  }
+
+  /**
+   * Present transient error feedback in the immersive UI.
+   * @param {string} message
+   */
+  showError(message) {
+    if (!this.onboardingPanel) return
+    this.onboardingPanel.showError(message)
+    this.errorDisplayTimer = 5
+    this.show()
   }
 
   /**
@@ -425,6 +497,12 @@ export class SpatialUI {
       this.scene.remove(this.toggleOrb.getMesh())
       this.toggleOrb.dispose()
       this.toggleOrb = null
+    }
+
+    if (this.onboardingPanel) {
+      this.uiGroup.remove(this.onboardingPanel.getMesh())
+      this.onboardingPanel.dispose()
+      this.onboardingPanel = null
     }
 
     // Dispose speed panel

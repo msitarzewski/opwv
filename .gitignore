@@ -39,6 +39,9 @@ dist-ssr/
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+blob-report/
 
 # Optional npm cache directory
 .npm

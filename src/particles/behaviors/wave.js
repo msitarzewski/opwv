@@ -16,7 +16,13 @@ import * as THREE from 'three'
  * @param {number} time - Global time for wave phase
  * @param {number} delta - Time delta
  */
-export function applyWaveMotion(particle, config, time, delta) {
+export function applyWaveMotion(
+  particle,
+  config,
+  time,
+  delta,
+  normalizedDirection = new THREE.Vector3()
+) {
   const {
     waveSpeed = 1.0,
     amplitude = 2.0,
@@ -29,7 +35,8 @@ export function applyWaveMotion(particle, config, time, delta) {
   const k = frequency // Wave number (simplified)
   const omega = waveSpeed * frequency // Angular frequency
 
-  const positionPhase = particle.position.dot(waveDirection.clone().normalize()) * k
+  normalizedDirection.copy(waveDirection).normalize()
+  const positionPhase = particle.position.dot(normalizedDirection) * k
   const timePhase = omega * time
 
   const phase = positionPhase - timePhase
@@ -44,10 +51,9 @@ export function applyWaveMotion(particle, config, time, delta) {
   particle.velocity.y += verticalForce * delta
 
   // Horizontal drift (wave propagation)
-  const drift = waveDirection.clone().normalize().multiplyScalar(waveSpeed * 0.1)
-  particle.velocity.x += drift.x * delta
-  particle.velocity.z += drift.z * delta
+  particle.velocity.x += normalizedDirection.x * waveSpeed * 0.1 * delta
+  particle.velocity.z += normalizedDirection.z * waveSpeed * 0.1 * delta
 
   // Damping
-  particle.velocity.multiplyScalar(0.98)
+  particle.velocity.multiplyScalar(Math.pow(0.98, delta * 72))
 }
