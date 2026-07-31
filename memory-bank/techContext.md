@@ -3,15 +3,22 @@
 ## Tech Stack
 
 ### Core Technologies
-- **Three.js**: WebGL renderer and scene management
+- **Three.js 0.169.0**: WebGL/WebXR renderer and scene management
 - **JavaScript**: ES6+ (modules, classes, async/await)
-- **Vite**: Build tool for fast development and optimized production bundles
-- **Simplex/Perlin Noise**: Optional noise sources for organic motion
+- **Vite 8.2.0 + Oxc**: Development and optimized production builds
+- **Simplex Noise 4.0.3**: Organic motion fields
+- **Web Audio API**: Dependency-free generated ambient sound
+- **Vitest + Playwright + axe-core**: Unit, functional, browser, and accessibility QA
 
 ### Development Environment
-- **Node.js**: Latest LTS
-- **Package Manager**: npm or yarn
+- **Node.js**: 20.19+ or 22.12+ per Vite 8 requirements
+- **Package Manager**: npm with committed lockfile
 - **Browser DevTools**: Chrome/Firefox for debugging and performance profiling
+
+### Development Commands
+- `npm run dev` - local development at `127.0.0.1:3742`
+- `npm run build` - production build
+- `npm run qa` - complete automated quality pipeline
 
 ## Performance Targets
 
@@ -75,7 +82,6 @@ for each particle:
 renderer.render(scene, camera)
 ```
 
-## Dependencies (Expected)
-- `three`: ^0.160.0 (or latest)
-- `vite`: ^5.0.0
-- `simplex-noise`: ^4.0.0 (or equivalent)
+## Pinned Runtime Dependencies
+- `three`: 0.169.0
+- `simplex-noise`: 4.0.3

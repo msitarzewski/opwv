@@ -15,19 +15,17 @@ import * as THREE from 'three'
  * Effect: Synchronized breathing/pulsing grid
  */
 
-let gridIndex = 0
-
-function latticeInitialization(rng, palette, bounds) {
+function latticeInitialization(rng, palette, bounds, particleIndex) {
   const rand = () => rng ? rng.random() : Math.random()
 
   // Grid dimensions (9×9×9 = 729)
   const gridSize = 9
   const totalParticles = gridSize * gridSize * gridSize
 
+  const gridIndex = particleIndex % totalParticles
   const i = gridIndex % gridSize
   const j = Math.floor(gridIndex / gridSize) % gridSize
   const k = Math.floor(gridIndex / (gridSize * gridSize))
-  gridIndex = (gridIndex + 1) % totalParticles
 
   // Grid spacing
   const spacing = 20.0 / (gridSize - 1)
@@ -56,7 +54,9 @@ function latticeInitialization(rng, palette, bounds) {
   // Neon CMY colors
   const colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#00FF88', '#FF0088', '#88FF00']
   const colorIndex = Math.floor(rand() * colors.length)
-  const color = new THREE.Color(colors[colorIndex])
+  const color = palette?.length
+    ? palette[colorIndex % palette.length].clone()
+    : new THREE.Color(colors[colorIndex])
 
   // Grid vertices larger
   const isVertex = (i === 0 || i === gridSize - 1) &&
@@ -79,7 +79,8 @@ const latticeEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: latticeInitialization
+    initializationFn: latticeInitialization,
+    wrapMode: 'none'
   },
 
   // Spring physics (NO flocking)
@@ -106,7 +107,7 @@ const latticeEnvironment = {
   },
 
   visual: {
-    renderMode: 'points',
+    renderMode: 'lattice',
     colorPalette: [
       '#00FFFF',  // Cyan
       '#FF00FF',  // Magenta

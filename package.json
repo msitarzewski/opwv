@@ -27,14 +27,34 @@
   ],
   "scripts": {
     "dev": "vite",
+    "dev:headset": "vite --host 0.0.0.0 --open false",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:functional": "vitest run tests/functional",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test tests/e2e/accessibility.spec.js",
+    "test:bundle": "node scripts/qa/check-bundle-budget.mjs",
+    "test:security": "node scripts/qa/check-security.mjs",
+    "audit:deps": "npm audit --audit-level=high",
+    "qa": "npm run lint && npm run test:coverage && npm run build && npm run test:bundle && npm run test:e2e && npm run test:security"
   },
   "devDependencies": {
-    "vite": "^5.4.10"
+    "@axe-core/playwright": "4.12.1",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "10.8.0",
+    "globals": "17.8.0",
+    "jsdom": "30.0.1",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
-    "three": "^0.169.0",
-    "simplex-noise": "^4.0.3"
+    "simplex-noise": "4.0.3",
+    "three": "0.169.0"
   }
 }

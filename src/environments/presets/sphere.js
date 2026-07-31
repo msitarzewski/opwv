@@ -27,7 +27,8 @@ const sphereEnvironment = {
       innerRadius: 5,   // Minimum distance from origin
       outerRadius: 20   // Maximum distance from origin
     },
-    initializationFn: null  // Use default Particle constructor (spherical distribution)
+    initializationFn: null,  // Use default Particle constructor (spherical distribution)
+    wrapMode: 'spherical'
   },
 
   // Behavior parameters (from ParticleSystem.js:25-35)
@@ -46,7 +47,7 @@ const sphereEnvironment = {
 
   // Visual aesthetics (from ParticleSystem.js:80-86)
   visual: {
-    renderMode: 'points',     // Standard point particles (baseline)
+    renderMode: 'soft',       // Soft-edged point sprites
     colorPalette: null,       // null = use generatePalette (seeded random colors)
     particleSize: 3,          // Base size in pixels
     opacity: 0.8,             // 80% opacity

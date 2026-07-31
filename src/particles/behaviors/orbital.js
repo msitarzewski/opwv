@@ -15,7 +15,12 @@ import * as THREE from 'three'
  * @param {number} config.dragCoefficient - Orbital decay/damping
  * @param {number} delta - Time delta
  */
-export function applyOrbitalMechanics(particle, config, delta) {
+export function applyOrbitalMechanics(
+  particle,
+  config,
+  delta,
+  toCenter = new THREE.Vector3()
+) {
   const {
     centerOfMass = new THREE.Vector3(0, 0, 0),
     gravitationalConstant = 50.0,
@@ -24,7 +29,7 @@ export function applyOrbitalMechanics(particle, config, delta) {
   } = config
 
   // Vector from particle to center
-  const toCenter = new THREE.Vector3().subVectors(centerOfMass, particle.position)
+  toCenter.subVectors(centerOfMass, particle.position)
   const distance = toCenter.length()
 
   // Prevent division by zero and singularity at center
@@ -35,11 +40,9 @@ export function applyOrbitalMechanics(particle, config, delta) {
   const forceMagnitude = (gravitationalConstant * centralMass) / (distance * distance)
 
   // Normalize and apply force
-  const gravitationalForce = toCenter.normalize().multiplyScalar(forceMagnitude)
-
   // Apply force to velocity (F = ma, a = F/m, m = 1)
-  particle.velocity.add(gravitationalForce.multiplyScalar(delta))
+  particle.velocity.addScaledVector(toCenter.normalize(), forceMagnitude * delta)
 
   // Orbital drag (slight decay for stability)
-  particle.velocity.multiplyScalar(dragCoefficient)
+  particle.velocity.multiplyScalar(Math.pow(dragCoefficient, delta * 72))
 }

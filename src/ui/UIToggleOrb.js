@@ -15,11 +15,13 @@ export class UIToggleOrb {
    * Create a UI toggle orb
    * @param {Function} onToggle - Callback when orb is activated (toggle UI)
    */
-  constructor(onToggle) {
+  constructor(onToggle, options = {}) {
     this.onToggle = onToggle
     this.isHovered = false
     this.dwellProgress = 0
     this.uiVisible = true // Track UI visibility state
+    this.activationCooldown = options.activationCooldown || 650
+    this.lastTriggerTime = -Infinity
 
     // Orb dimensions (small visual, large hit area)
     this.visualSize = 0.10 // Visual size (10cm diameter - small and subtle)
@@ -55,6 +57,8 @@ export class UIToggleOrb {
     })
 
     this.hitSphere = new THREE.Mesh(hitGeometry, hitMaterial)
+    this.mesh.userData.toggleOrb = this
+    this.hitSphere.userData.toggleOrb = this
     this.mesh.add(this.hitSphere) // Child of visible mesh
 
     // Position below and in front of camera (out of peripheral vision)
@@ -163,10 +167,18 @@ export class UIToggleOrb {
   /**
    * Trigger toggle action
    */
-  trigger() {
-    if (this.onToggle) {
-      this.onToggle()
+  trigger(timestamp = performance.now()) {
+    if (timestamp - this.lastTriggerTime < this.activationCooldown) {
+      return false
     }
+
+    this.lastTriggerTime = timestamp
+    if (typeof this.onToggle === 'function') {
+      this.onToggle()
+      return true
+    }
+
+    return false
   }
 
   /**

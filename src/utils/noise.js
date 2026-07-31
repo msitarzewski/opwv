@@ -9,9 +9,19 @@ export class NoiseField {
    * Create a noise field with configurable parameters
    * @param {number} scale - Noise coordinate scale (smaller = larger features)
    * @param {number} strength - Noise output multiplier
+   * @param {Function} random - Random source for deterministic simplex permutation
    */
-  constructor(scale = 0.5, strength = 0.3) {
-    this.noise3D = createNoise3D()
+  constructor(scale = 0.5, strength = 0.3, random = Math.random) {
+    if (!Number.isFinite(scale) || scale < 0) {
+      throw new RangeError('NoiseField scale must be a non-negative finite number')
+    }
+    if (!Number.isFinite(strength) || strength < 0) {
+      throw new RangeError('NoiseField strength must be a non-negative finite number')
+    }
+    if (typeof random !== 'function') {
+      throw new TypeError('NoiseField random source must be a function')
+    }
+    this.noise3D = createNoise3D(random)
     this.scale = scale
     this.strength = strength
   }
@@ -23,7 +33,7 @@ export class NoiseField {
    * @param {number} time - Time offset for animation
    * @returns {Object} - {x, y} noise vector
    */
-  get(x, y, time) {
+  get(x, y, time, target = null) {
     // Sample noise at scaled coordinates
     // Use time as Z dimension for temporal variation
     const noiseX = this.noise3D(
@@ -40,10 +50,10 @@ export class NoiseField {
     )
 
     // Return scaled noise vector
-    return {
-      x: noiseX * this.strength,
-      y: noiseY * this.strength
-    }
+    const output = target || {}
+    output.x = noiseX * this.strength
+    output.y = noiseY * this.strength
+    return output
   }
 
   /**
@@ -54,7 +64,7 @@ export class NoiseField {
    * @param {number} time - Time offset for animation
    * @returns {Object} - {x, y, z} noise vector
    */
-  get3D(x, y, z, time) {
+  get3D(x, y, z, time, target = null) {
     // Sample noise at scaled coordinates for each axis
     // Use time as additional dimension for temporal variation
     const noiseX = this.noise3D(
@@ -78,10 +88,10 @@ export class NoiseField {
     )
 
     // Return scaled noise vector
-    return {
-      x: noiseX * this.strength,
-      y: noiseY * this.strength,
-      z: noiseZ * this.strength
-    }
+    const output = target || {}
+    output.x = noiseX * this.strength
+    output.y = noiseY * this.strength
+    output.z = noiseZ * this.strength
+    return output
   }
 }

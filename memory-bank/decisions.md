@@ -169,6 +169,28 @@
 
 ---
 
+## 2026-07-31: Progressive Full Experience Architecture
+
+**Status**: Approved
+
+**Context**: The VR-only prototype needed a useful browser experience, stronger performance, shareable state, interaction, audio, and publication-grade QA.
+
+**Decision**:
+- Keep one environment manager as the scene orchestration boundary
+- Separate particle simulation from GPU presentation
+- Use spatial hashing for neighbor lookup
+- Treat WebXR as progressive enhancement over a complete non-XR preview
+- Use native Web Audio and canonical URL state without adding runtime dependencies
+- Use Vite 8's Oxc minifier and automated bundle/security/browser gates
+
+**Consequences**:
+- **Positive**: Faster neighbor lookup, richer rendering, shareable scenes, accessible preview, lower dependency risk, and measurable quality gates
+- **Negative**: More lifecycle coordination in `src/main.js` and target-headset testing remains necessary
+
+**References**: `memory-bank/tasks/2026-07/310726_full-experience-upgrade.md`
+
+---
+
 ## Future Decision Points
 
 ### Phase 2: Multi-Mode Architecture

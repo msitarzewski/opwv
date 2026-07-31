@@ -15,7 +15,7 @@ import * as THREE from 'three'
  * @param {number} config.upwardDrift - Upward force along axis
  * @param {number} delta - Time delta
  */
-export function applyFlowField(particle, config, delta) {
+export function applyFlowField(particle, config, delta, scratch = null) {
   const {
     vortexAxis = new THREE.Vector3(0, 1, 0), // Y-axis (vertical)
     rotationSpeed = 2.0,
@@ -25,13 +25,17 @@ export function applyFlowField(particle, config, delta) {
 
   // Project particle position onto plane perpendicular to axis
   // For Y-axis vortex, this is the XZ plane
-  const axisNorm = vortexAxis.clone().normalize()
+  const axisNorm = scratch?.axisNorm || new THREE.Vector3()
+  const axisVector = scratch?.axisVector || new THREE.Vector3()
+  const radialVector = scratch?.radialVector || new THREE.Vector3()
+  const tangent = scratch?.tangent || new THREE.Vector3()
+  const totalForce = scratch?.totalForce || new THREE.Vector3()
+  axisNorm.copy(vortexAxis).normalize()
 
   // Radial vector (distance from axis)
-  const posProjection = particle.position.clone()
-  const axisComponent = posProjection.dot(axisNorm)
-  const axisVector = axisNorm.clone().multiplyScalar(axisComponent)
-  const radialVector = new THREE.Vector3().subVectors(posProjection, axisVector)
+  const axisComponent = particle.position.dot(axisNorm)
+  axisVector.copy(axisNorm).multiplyScalar(axisComponent)
+  radialVector.subVectors(particle.position, axisVector)
 
   const radius = radialVector.length()
 
@@ -39,25 +43,15 @@ export function applyFlowField(particle, config, delta) {
   if (radius < 0.1) return
 
   // Tangential direction (perpendicular to both axis and radial)
-  const tangent = new THREE.Vector3().crossVectors(axisNorm, radialVector).normalize()
+  tangent.crossVectors(axisNorm, radialVector).normalize()
 
   // Angular velocity (faster near center)
   const angularVelocity = rotationSpeed / (radius + 0.5)
 
   // Rotational force (tangential)
-  const rotationalForce = tangent.multiplyScalar(angularVelocity)
-
-  // Centripetal force (toward axis)
-  const centripetalForce = radialVector.normalize().multiplyScalar(-centripetalStrength)
-
-  // Upward drift along axis
-  const upwardForce = axisNorm.clone().multiplyScalar(upwardDrift)
-
-  // Combine forces
-  const totalForce = new THREE.Vector3()
-    .add(rotationalForce)
-    .add(centripetalForce)
-    .add(upwardForce)
+  totalForce.copy(tangent).multiplyScalar(angularVelocity)
+  totalForce.addScaledVector(radialVector.normalize(), -centripetalStrength)
+  totalForce.addScaledVector(axisNorm, upwardDrift)
 
   // Apply to velocity
   particle.velocity.add(totalForce.multiplyScalar(delta))

@@ -114,3 +114,30 @@ particle.velocity.add(attraction)
 - **Audio-reactive**: Map audio frequency to color/motion
 - **URL seed sharing**: `?seed=12345` for reproducible visuals
 - **Performance presets**: Low/Medium/High quality settings
+
+## Full Experience Architecture (2026-07)
+
+### Progressive Experience Shell
+- The non-XR landing page is a complete accessible preview, not an error or compatibility screen
+- WebXR controls appear only after capability detection succeeds
+- Permission denial returns to a retryable state without discarding the current scene
+
+### Simulation and Presentation Separation
+- `ParticleSystem` owns particle state, environment physics, spatial lookup, and interaction forces
+- `ParticleRenderer` owns shaders, point presentation, trails, connections, and render-mode overlays
+- `SpatialHash` provides bounded reusable neighbor queries and replaces full-set neighbor scans
+
+### Scene State
+- Environment, seed, speed, and audio preference serialize through canonical URL state
+- URL parsing validates external values before they reach environment or control services
+- Environment presets remain dynamically imported and managed by the existing `EnvironmentManager`
+
+### Optional Services
+- Audio is generated with the Web Audio API and starts only after explicit user intent
+- Hand and controller interaction produce normalized particle-force sources
+- Every optional service owns cleanup and can be disabled without replacing the application shell
+
+### Quality Gates
+- Unit/functional tests cover deterministic modules and orchestration boundaries
+- Playwright covers landing, WebXR capability, accessibility, performance, and browser security behavior
+- Bundle and security scripts enforce publish-time budgets and artifact policy

@@ -15,7 +15,7 @@ import * as THREE from 'three'
  * Effect: Dynamic swirling tornado
  */
 
-function vortexInitialization(rng, palette, bounds) {
+function vortexInitialization(rng, palette) {
   const rand = () => rng ? rng.random() : Math.random()
 
   // Cylindrical distribution
@@ -41,7 +41,9 @@ function vortexInitialization(rng, palette, bounds) {
   // Fire/energy colors
   const colors = ['#FF4500', '#FF6347', '#FFA500', '#FFD700', '#FF8C00', '#FF7F50']
   const colorIndex = Math.floor(rand() * colors.length)
-  const color = new THREE.Color(colors[colorIndex])
+  const color = palette?.length
+    ? palette[colorIndex % palette.length].clone()
+    : new THREE.Color(colors[colorIndex])
 
   // Brighter near center
   const size = Math.max(2, 5 - r * 0.2)
@@ -61,7 +63,8 @@ const vortexEnvironment = {
       innerRadius: 5,
       outerRadius: 20
     },
-    initializationFn: vortexInitialization
+    initializationFn: vortexInitialization,
+    wrapMode: 'spherical'
   },
 
   // Flow field behavior (NO flocking)
@@ -89,7 +92,8 @@ const vortexEnvironment = {
   },
 
   visual: {
-    renderMode: 'points',
+    renderMode: 'trails',
+    emissive: '#FF8C00',
     colorPalette: [
       '#FF4500',  // Orange red
       '#FF6347',  // Tomato

@@ -1,8 +1,8 @@
 # Active Context
 
-**Last Updated**: 2025-10-29
-**Current Phase**: VR Environments Implementation (5/8 tasks complete)
-**Sprint Focus**: VR Environments milestone (8 tasks, 18-22 hours, 15.75hr complete)
+**Last Updated**: 2026-07-31
+**Current Phase**: Full Experience Upgrade complete
+**Sprint Focus**: Publish the approved upgrade for review
 
 ## Current Sprint Goals
 1. ✅ Initialize project structure and development environment
@@ -20,37 +20,16 @@
 13. ✅ Environment presets with diverse physics (VR-05)
 
 ## Active Work
-- **Status**: VR-05 ✅ COMPLETE - Environment Presets (7 unique physics systems)
-- **Milestone**: V1 VR Environments (5/8 tasks complete - 62.5%)
-- **Current Task**: Ready for VR-06 (Landing Page) or VR-07 (Environment Transitions)
+- **Status**: Full experience upgrade ✅ COMPLETE and visually approved
+- **Milestone**: Accessible landing, immersive WebXR, interaction, audio, performance, security, and QA
+- **Current Task**: Publish `codex/opwv-full-upgrade` as a draft pull request
 
 ## Immediate Next Steps
-1. ✅ Set up Vite project structure (MVP-01)
-2. ✅ Install Three.js and dependencies (MVP-01)
-3. ✅ Create basic HTML/CSS shell (MVP-02)
-4. ✅ Initialize Three.js renderer and scene (MVP-03)
-5. ✅ Implement particle system foundation (MVP-04)
-6. ✅ Implement organic motion behaviors (MVP-05)
-7. ✅ Implement seeded randomization (MVP-06)
-8. ✅ Implement color palette generation (MVP-07)
-9. ✅ Add mouse/touch interaction (MVP-08)
-10. ✅ Implement performance monitoring (MVP-09)
-11. ✅ Final testing and optimization (MVP-10)
-12. ✅ WebXR Setup and Dependencies (XR-01)
-13. ✅ Camera System Conversion (XR-02)
-14. ✅ WebXR Session Management (XR-03)
-15. ✅ 360° Spherical Particle Space (XR-04)
-16. ✅ VR Rendering Loop (XR-05)
-17. ✅ XR Testing and Optimization (XR-06)
-18. ✅ V1 Planning (VR Environments milestone - 8 tasks defined)
-19. ✅ **VR-01**: Environment System Architecture (2.5hr)
-20. ✅ **VR-02**: VR-Only Migration (1.75hr)
-21. ✅ **VR-03**: Spatial UI Framework (3.5hr)
-22. ✅ **VR-04**: Speed Control System (2.0hr)
-23. **VR-05**: Environment Presets (4.5hr)
-24. **VR-06**: Landing Page (1.25hr)
-25. **VR-07**: Environment Transitions (2.25hr)
-26. **VR-08**: Testing and Optimization (2.75hr)
+1. ✅ Complete integrated feature upgrade
+2. ✅ Pass lint, unit, functional, coverage, build, bundle, security, Chromium, and WebKit gates
+3. ✅ Complete user visual review
+4. Publish draft pull request
+5. Perform headset validation before merging
 
 ## Current Blockers
 None
@@ -64,6 +43,9 @@ None (proceeding with PRD as specified)
 - **Target**: Browser-based, no backend
 
 ## Recent Changes
+- 2026-07-31: Full experience upgrade completed and approved for publication
+- 2026-07-31: Added landing, transitions, GPU particle presentation, hand interaction, audio, URL state, and automated QA
+- 2026-07-31: Switched Vite 8 minification to Oxc and local development port to 3742
 - 2025-10-25: Memory Bank initialized from PRD
 - 2025-10-25: Project directory structure created
 - 2025-10-25: MVP-01 completed (Project Setup)
@@ -92,6 +74,7 @@ None (proceeding with PRD as specified)
 - 2025-10-28: VR-02 completed (VR-Only Migration - removed 2D mode, single camera, -3.49 kB bundle reduction)
 
 ## Upcoming Milestones
+- **Review and headset validation**: Review the draft PR and validate immersive interaction on target hardware
 - **XR Test (✅ COMPLETE)**: WebXR 360° immersive viewing mode (6/6 tasks complete, user tested: "That's amazing!")
 - **VR Environments (PLANNED)**: V1 release with multiple spatial environments (8 tasks, 18-22hr)
   - Vision Pro-style spatial UI for environment selection

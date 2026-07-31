@@ -1,360 +1,380 @@
-// Particle system manager with efficient BufferGeometry rendering
 import * as THREE from 'three'
 import { Particle } from './Particle.js'
-import { calculateCohesion, calculateAlignment, calculateSeparation, calculateUserAttraction, wrapSphericalBounds } from './behaviors.js'
-import { NoiseField } from '../utils/noise.js'
-import { generatePalette } from '../utils/colors.js'
-import { Environment } from '../environments/Environment.js'
-
-// Behavior modules for different environment modes
+import {
+  calculateAlignment,
+  calculateCohesion,
+  calculateSeparation,
+  calculateUserInteraction,
+  wrapSphericalBounds
+} from './behaviors.js'
 import { applyBrownianMotion } from './behaviors/brownian.js'
-import { applyOrbitalMechanics } from './behaviors/orbital.js'
-import { applySpringForce } from './behaviors/spring.js'
 import { applyFlowField } from './behaviors/flow.js'
-import { applyWaveMotion } from './behaviors/wave.js'
+import { applyOrbitalMechanics } from './behaviors/orbital.js'
 import { apply4DRotation } from './behaviors/rotation.js'
+import { applySpringForce } from './behaviors/spring.js'
+import { applyWaveMotion } from './behaviors/wave.js'
+import { Environment } from '../environments/Environment.js'
+import { generatePalette } from '../utils/colors.js'
+import { NoiseField } from '../utils/noise.js'
+import { ParticleRenderer } from './ParticleRenderer.js'
+import { SpatialHash } from './SpatialHash.js'
 
+/**
+ * Environment-driven particle simulation.
+ *
+ * Physics state remains independent from ParticleRenderer so adaptive quality
+ * can alter the active simulation/draw range without reallocating GPU buffers.
+ */
 export class ParticleSystem {
-  /**
-   * Create a particle system with N particles
-   *
-   * Supports two constructor signatures for backward compatibility:
-   * 1. NEW: ParticleSystem(environment, null, rng) - Environment-driven config
-   * 2. OLD: ParticleSystem(count, bounds, rng) - Legacy direct parameters
-   *
-   * @param {Environment|number} countOrEnvironment - Environment instance or particle count
-   * @param {Object|null} bounds - Bounds object (legacy) or null (environment mode)
-   * @param {SeededRandom} rng - Optional seeded random number generator
-   */
-  constructor(countOrEnvironment, bounds = null, rng = null) {
-    this.particles = []
+  constructor(environment, _unused = null, rng = null) {
+    if (!(environment instanceof Environment)) {
+      throw new Error('ParticleSystem requires an Environment instance')
+    }
+
+    this.environment = environment
     this.rng = rng
     this.time = 0
+    this.bounds = environment.spatial.bounds
+    this.maxCount = environment.spatial.particleCount
+    this.count = this.maxCount
+    this.particles = []
 
-    // Detect constructor mode: Environment instance vs. legacy parameters
-    if (countOrEnvironment instanceof Environment) {
-      // NEW PATH: Environment-driven configuration
-      const env = countOrEnvironment
+    this.palette = environment.visual.colorPalette
+      ? environment.visual.colorPalette.map(color => new THREE.Color(color))
+      : rng
+        ? generatePalette(rng, 3)
+        : null
 
-      // Extract spatial configuration
-      this.count = env.spatial.particleCount
-      this.bounds = env.spatial.bounds
-
-      // Generate color palette (if rng provided)
-      this.palette = rng ? generatePalette(rng, 3) : null
-
-      // Apply behavior configuration from environment
-      this.config = {
-        cohesionRadius: env.behavior.cohesionRadius,
-        cohesionWeight: env.behavior.cohesionWeight,
-        alignmentRadius: env.behavior.alignmentRadius,
-        alignmentWeight: env.behavior.alignmentWeight,
-        separationRadius: env.behavior.separationRadius,
-        separationWeight: env.behavior.separationWeight,
-        maxSpeed: env.behavior.maxSpeed,
-        interactionStrength: 1.0,  // Not yet configurable per environment
-        interactionRadius: 4.0      // Not yet configurable per environment
-      }
-
-      // Initialize noise field from environment parameters
-      this.noiseField = new NoiseField(env.behavior.noiseScale, env.behavior.noiseStrength)
-
-      // Store environment reference for material updates
-      this.environment = env
-
-    } else {
-      // LEGACY PATH: Direct parameters (backward compatibility)
-      this.count = countOrEnvironment
-      this.bounds = bounds
-
-      // Generate color palette (if rng provided)
-      this.palette = rng ? generatePalette(rng, 3) : null
-
-      // Use hardcoded defaults (existing behavior)
-      this.config = {
-        cohesionRadius: 2.0,
-        cohesionWeight: 0.05,
-        alignmentRadius: 2.0,
-        alignmentWeight: 0.05,
-        separationRadius: 1.0,
-        separationWeight: 0.1,
-        maxSpeed: 2.0,
-        interactionStrength: 1.0,
-        interactionRadius: 4.0
-      }
-
-      // Hardcoded noise field (existing behavior)
-      this.noiseField = new NoiseField(0.5, 0.3)
-
-      this.environment = null
+    this.config = {
+      cohesionRadius: environment.behavior.cohesionRadius,
+      cohesionWeight: environment.behavior.cohesionWeight,
+      alignmentRadius: environment.behavior.alignmentRadius,
+      alignmentWeight: environment.behavior.alignmentWeight,
+      separationRadius: environment.behavior.separationRadius,
+      separationWeight: environment.behavior.separationWeight,
+      maxSpeed: environment.behavior.maxSpeed,
+      interactionStrength: environment.behavior.interactionStrength,
+      interactionRadius: environment.behavior.interactionRadius,
+      interactionMaxSpeed: environment.behavior.interactionMaxSpeed
     }
 
-    // Create particle instances
-    // Check if environment provides custom initialization function
-    const useCustomInit = this.environment && this.environment.spatial.initializationFn
+    this.noiseField = new NoiseField(
+      environment.behavior.noiseScale,
+      environment.behavior.noiseStrength,
+      rng && typeof rng.random === 'function' ? () => rng.random() : Math.random
+    )
 
-    if (useCustomInit) {
-      // Custom initialization path - call initializationFn for each particle
-      for (let i = 0; i < this.count; i++) {
-        const customProps = this.environment.spatial.initializationFn(this.rng, this.palette, this.bounds)
+    this.initializeParticles()
 
-        // Create particle-like object with custom properties
-        // Must have: position (Vector3), velocity (Vector3), color (Color), size (number)
-        const particle = {
-          position: customProps.position,
-          velocity: customProps.velocity,
-          color: customProps.color,
-          size: customProps.size,
-          // Include update method from Particle class
-          update: function(delta) {
-            this.position.x += this.velocity.x * delta
-            this.position.y += this.velocity.y * delta
-            this.position.z += this.velocity.z * delta
-          }
-        }
+    const maxNeighborRadius = Math.max(
+      this.config.cohesionRadius,
+      this.config.alignmentRadius,
+      this.config.separationRadius,
+      0.001
+    )
+    this.spatialHash = new SpatialHash(maxNeighborRadius)
+    this.spatialHash.rebuild(this.particles, this.count)
+    this.spatialCandidates = []
+    this.cohesionNeighbors = []
+    this.alignmentNeighbors = []
+    this.separationNeighbors = []
 
-        this.particles.push(particle)
-      }
-    } else {
-      // Default initialization path - use Particle constructor
-      for (let i = 0; i < this.count; i++) {
+    this.cohesionForce = new THREE.Vector3()
+    this.alignmentForce = new THREE.Vector3()
+    this.separationForce = new THREE.Vector3()
+    this.separationScratch = new THREE.Vector3()
+    this.noiseForce = new THREE.Vector3()
+    this.interactionForce = new THREE.Vector3()
+    this.behaviorScratch = new THREE.Vector3()
+    this.rotationProjectedPosition = new THREE.Vector3()
+    this.flowScratch = {
+      axisNorm: new THREE.Vector3(),
+      axisVector: new THREE.Vector3(),
+      radialVector: new THREE.Vector3(),
+      tangent: new THREE.Vector3(),
+      totalForce: new THREE.Vector3()
+    }
+    this.singleInteractionPosition = new THREE.Vector3()
+    this.singleInteraction = {
+      position: this.singleInteractionPosition,
+      mode: 'attract',
+      strength: 1,
+      radius: this.config.interactionRadius
+    }
+
+    this.particleRenderer = new ParticleRenderer(this.particles, environment)
+    // Compatibility aliases for diagnostics and focused tests.
+    this.geometry = this.particleRenderer.geometry
+    this.material = this.particleRenderer.material
+    this.points = this.particleRenderer.getObject3D()
+  }
+
+  initializeParticles() {
+    const initializationFn = this.environment.spatial.initializationFn
+
+    for (let i = 0; i < this.maxCount; i++) {
+      if (!initializationFn) {
         this.particles.push(new Particle(this.bounds, this.rng, this.palette))
+        continue
       }
-    }
 
-    // Create BufferGeometry for efficient rendering
-    this.geometry = new THREE.BufferGeometry()
+      const properties = initializationFn(
+        this.rng,
+        this.palette,
+        this.bounds,
+        i,
+        this.maxCount
+      )
 
-    // Position buffer (Float32Array for performance)
-    // Each particle has 3 values: x, y, z
-    const positions = new Float32Array(this.count * 3)
+      if (!properties?.position?.isVector3 ||
+          !properties?.velocity?.isVector3 ||
+          !properties?.color?.isColor) {
+        throw new Error(
+          `${this.environment.id} initialization must return position, velocity, and color`
+        )
+      }
 
-    // Color buffer (Float32Array)
-    // Each particle has 3 values: r, g, b (0-1 range)
-    const colors = new Float32Array(this.count * 3)
-
-    // Initialize buffers from particle data
-    for (let i = 0; i < this.count; i++) {
-      const particle = this.particles[i]
-      const i3 = i * 3
-
-      // Position
-      positions[i3] = particle.position.x
-      positions[i3 + 1] = particle.position.y
-      positions[i3 + 2] = particle.position.z
-
-      // Color
-      colors[i3] = particle.color.r
-      colors[i3 + 1] = particle.color.g
-      colors[i3 + 2] = particle.color.b
-    }
-
-    // Set attributes on geometry
-    this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    this.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-
-    // Create PointsMaterial
-    // If environment provided, use visual config; otherwise use defaults
-    if (this.environment) {
-      this.material = new THREE.PointsMaterial({
-        size: this.environment.visual.particleSize,
-        vertexColors: true,
-        transparent: true,
-        opacity: this.environment.visual.opacity,
-        sizeAttenuation: this.environment.visual.sizeAttenuation
-      })
-    } else {
-      // Legacy defaults (existing behavior)
-      this.material = new THREE.PointsMaterial({
-        size: 3,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.8,
-        sizeAttenuation: false
+      this.particles.push({
+        ...properties,
+        size: Number.isFinite(properties.size) && properties.size > 0
+          ? properties.size
+          : this.environment.visual.particleSize
       })
     }
-
-    // Create Points mesh (single draw call for all particles)
-    this.points = new THREE.Points(this.geometry, this.material)
   }
 
   /**
-   * Find neighbors within radius of a particle
-   * @param {Particle} particle - The particle to find neighbors for
-   * @param {number} radius - Search radius
-   * @returns {Particle[]} - Array of nearby particles
+   * Compatibility query backed by the current frame's spatial hash.
    */
-  findNeighbors(particle, radius) {
-    const neighbors = []
+  findNeighbors(particle, radius, target = []) {
+    this.spatialHash.query(particle.position, radius, target)
     const radiusSquared = radius * radius
+    let writeIndex = 0
 
-    for (const other of this.particles) {
-      if (other === particle) continue
-
-      const distSquared = particle.position.distanceToSquared(other.position)
-      if (distSquared < radiusSquared) {
-        neighbors.push(other)
+    for (const other of target) {
+      if (other !== particle &&
+          particle.position.distanceToSquared(other.position) < radiusSquared) {
+        target[writeIndex++] = other
       }
     }
-
-    return neighbors
+    target.length = writeIndex
+    return target
   }
 
-  /**
-   * Apply motion behaviors to a particle (mode-aware)
-   * @param {Particle} particle - The particle to apply behaviors to
-   * @param {Object} mousePosition - {x, y} in world coordinates (or null)
-   * @param {number} delta - Time delta for behavior calculations
-   */
-  applyBehaviors(particle, mousePosition, delta) {
-    // Get behavior mode from environment (default: 'flocking')
-    const mode = this.environment ? this.environment.behavior.mode : 'flocking'
-    const modeParams = this.environment ? this.environment.behavior.modeParams : {}
+  classifyFlockingNeighbors(particle) {
+    const maxRadius = this.spatialHash.cellSize
+    this.spatialHash.query(particle.position, maxRadius, this.spatialCandidates)
+    this.cohesionNeighbors.length = 0
+    this.alignmentNeighbors.length = 0
+    this.separationNeighbors.length = 0
 
-    // Apply behavior based on mode
+    const cohesionRadiusSquared = this.config.cohesionRadius ** 2
+    const alignmentRadiusSquared = this.config.alignmentRadius ** 2
+    const separationRadiusSquared = this.config.separationRadius ** 2
+
+    for (const other of this.spatialCandidates) {
+      if (other === particle) continue
+      const distanceSquared = particle.position.distanceToSquared(other.position)
+      if (distanceSquared < cohesionRadiusSquared) this.cohesionNeighbors.push(other)
+      if (distanceSquared < alignmentRadiusSquared) this.alignmentNeighbors.push(other)
+      if (distanceSquared < separationRadiusSquared) this.separationNeighbors.push(other)
+    }
+  }
+
+  applyFlockingBehavior(particle, delta) {
+    this.classifyFlockingNeighbors(particle)
+
+    calculateCohesion(
+      particle,
+      this.cohesionNeighbors,
+      this.config.cohesionWeight,
+      this.cohesionForce
+    )
+    calculateAlignment(
+      particle,
+      this.alignmentNeighbors,
+      this.config.alignmentWeight,
+      this.alignmentForce
+    )
+    calculateSeparation(
+      particle,
+      this.separationNeighbors,
+      this.config.separationRadius,
+      this.config.separationWeight,
+      this.separationForce,
+      this.separationScratch
+    )
+
+    this.noiseField.get3D(
+      particle.position.x,
+      particle.position.y,
+      particle.position.z,
+      this.time,
+      this.noiseForce
+    )
+
+    const frameScale = delta * 72
+    particle.velocity
+      .addScaledVector(this.cohesionForce, frameScale)
+      .addScaledVector(this.alignmentForce, frameScale)
+      .addScaledVector(this.separationForce, frameScale)
+      .addScaledVector(this.noiseForce, frameScale)
+
+    this.clampVelocity(particle, this.config.maxSpeed)
+  }
+
+  applyModeBehavior(particle, delta) {
+    const { mode, modeParams } = this.environment.behavior
+
     switch (mode) {
       case 'flocking':
-        this.applyFlockingBehavior(particle, mousePosition)
+        this.applyFlockingBehavior(particle, delta)
         break
-
       case 'brownian':
-        applyBrownianMotion(particle, modeParams, delta)
+        applyBrownianMotion(particle, modeParams, delta, this.rng, this.behaviorScratch)
         break
-
       case 'orbital':
-        applyOrbitalMechanics(particle, modeParams, delta)
+        applyOrbitalMechanics(particle, modeParams, delta, this.behaviorScratch)
         break
-
       case 'spring':
-        applySpringForce(particle, modeParams, delta)
+        applySpringForce(particle, modeParams, delta, this.behaviorScratch)
         break
-
       case 'flow':
-        applyFlowField(particle, modeParams, delta)
+        applyFlowField(particle, modeParams, delta, this.flowScratch)
         break
-
       case 'wave':
-        applyWaveMotion(particle, modeParams, this.time, delta)
+        applyWaveMotion(particle, modeParams, this.time, delta, this.behaviorScratch)
         break
-
       case 'rotation':
-        apply4DRotation(particle, modeParams, delta)
+        apply4DRotation(
+          particle,
+          modeParams,
+          delta,
+          this.behaviorScratch,
+          this.rotationProjectedPosition
+        )
         break
-
       default:
-        console.warn(`Unknown behavior mode: ${mode}, falling back to flocking`)
-        this.applyFlockingBehavior(particle, mousePosition)
-    }
-
-    // Boundary wrapping (always apply for VR spherical space)
-    wrapSphericalBounds(particle.position, this.bounds.innerRadius, this.bounds.outerRadius)
-  }
-
-  /**
-   * Apply flocking behavior (original behavior)
-   * @param {Particle} particle - The particle to apply behaviors to
-   * @param {Object} mousePosition - {x, y} in world coordinates (or null)
-   */
-  applyFlockingBehavior(particle, mousePosition) {
-    // Find neighbors for flocking behaviors
-    const cohesionNeighbors = this.findNeighbors(particle, this.config.cohesionRadius)
-    const alignmentNeighbors = this.findNeighbors(particle, this.config.alignmentRadius)
-    const separationNeighbors = this.findNeighbors(particle, this.config.separationRadius)
-
-    // Calculate flocking forces
-    const cohesion = calculateCohesion(particle, cohesionNeighbors, this.config.cohesionWeight)
-    const alignment = calculateAlignment(particle, alignmentNeighbors, this.config.alignmentWeight)
-    const separation = calculateSeparation(particle, separationNeighbors, this.config.separationRadius, this.config.separationWeight)
-
-    // 3D noise for spherical space
-    const noise = this.noiseField.get3D(particle.position.x, particle.position.y, particle.position.z, this.time)
-    const noiseForce = new THREE.Vector3(noise.x, noise.y, noise.z)
-
-    // Calculate user interaction force
-    const userAttraction = calculateUserAttraction(particle, mousePosition, this.config.interactionStrength, this.config.interactionRadius)
-
-    // Accumulate all forces to velocity
-    particle.velocity.add(cohesion)
-    particle.velocity.add(alignment)
-    particle.velocity.add(separation)
-    particle.velocity.add(noiseForce)
-    particle.velocity.add(userAttraction)
-
-    // Clamp velocity to max speed
-    if (particle.velocity.length() > this.config.maxSpeed) {
-      particle.velocity.normalize().multiplyScalar(this.config.maxSpeed)
+        // Environment validation prevents this branch.
+        throw new Error(`Unsupported behavior mode: ${mode}`)
     }
   }
 
-  /**
-   * Update all particles and sync BufferGeometry attributes
-   * @param {number} delta - Time elapsed since last frame (seconds)
-   * @param {Object} mousePosition - {x, y} in world coordinates (or null)
-   */
-  update(delta, mousePosition = null) {
-    // Increment time for noise animation
-    this.time += delta
+  applyInteractionForces(particle, forceSources, delta) {
+    if (!forceSources || (Array.isArray(forceSources) && forceSources.length === 0)) return
 
-    const positions = this.geometry.attributes.position.array
+    const sources = forceSources
+    if (!Array.isArray(forceSources)) {
+      // Retain compatibility with the prior {x, y, z?} interaction shape.
+      if (!Number.isFinite(forceSources.x) || !Number.isFinite(forceSources.y)) return
+      this.singleInteractionPosition.set(
+        forceSources.x,
+        forceSources.y,
+        Number.isFinite(forceSources.z) ? forceSources.z : 0
+      )
+      calculateUserInteraction(particle, this.singleInteraction, this.interactionForce)
+      particle.velocity.addScaledVector(
+        this.interactionForce,
+        this.config.interactionStrength * delta
+      )
+      this.clampVelocity(particle, this.config.interactionMaxSpeed)
+      return
+    }
 
-    // Update each particle and write to buffer
+    for (const source of sources) {
+      calculateUserInteraction(particle, source, this.interactionForce)
+      particle.velocity.addScaledVector(
+        this.interactionForce,
+        this.config.interactionStrength * delta
+      )
+    }
+
+    this.clampVelocity(particle, this.config.interactionMaxSpeed)
+  }
+
+  clampVelocity(particle, maxSpeed) {
+    if (maxSpeed <= 0) return
+    const speedSquared = particle.velocity.lengthSq()
+    if (speedSquared > maxSpeed * maxSpeed) {
+      particle.velocity.multiplyScalar(maxSpeed / Math.sqrt(speedSquared))
+    }
+  }
+
+  applyBounds(particle) {
+    if (this.environment.spatial.wrapMode === 'spherical') {
+      wrapSphericalBounds(
+        particle.position,
+        this.bounds.innerRadius,
+        this.bounds.outerRadius
+      )
+    }
+  }
+
+  update(delta, forceSources = null) {
+    if (!Number.isFinite(delta) || delta <= 0) return
+    const safeDelta = Math.min(delta, 0.1)
+    this.time += safeDelta
+
+    if (this.environment.behavior.mode === 'flocking') {
+      this.spatialHash.rebuild(this.particles, this.count)
+    }
+
+    // Resolve forces against one coherent position snapshot. Integrating in a
+    // second pass keeps the spatial hash valid for the entire flocking step.
     for (let i = 0; i < this.count; i++) {
       const particle = this.particles[i]
-
-      // Apply motion behaviors (mode-aware)
-      this.applyBehaviors(particle, mousePosition, delta)
-
-      // Update position based on velocity
-      particle.update(delta)
-
-      const i3 = i * 3
-      positions[i3] = particle.position.x
-      positions[i3 + 1] = particle.position.y
-      positions[i3 + 2] = particle.position.z
+      this.applyModeBehavior(particle, safeDelta)
+      this.applyInteractionForces(particle, forceSources, safeDelta)
     }
 
-    // Mark attribute as needing update for GPU
-    this.geometry.attributes.position.needsUpdate = true
+    for (let i = 0; i < this.count; i++) {
+      const particle = this.particles[i]
+      particle.position.addScaledVector(particle.velocity, safeDelta)
+      this.applyBounds(particle)
+    }
+
+    this.particleRenderer.sync(this.count)
   }
 
-  /**
-   * Get the THREE.Points object to add to scene
-   * @returns {THREE.Points}
-   */
   getPoints() {
     return this.points
   }
 
-  /**
-   * Get current active particle count
-   * @returns {number} - Number of actively updated particles
-   */
   getActiveCount() {
     return this.count
   }
 
-  /**
-   * Reduce particle count by percentage for adaptive quality
-   * @param {number} reductionRate - Percentage to reduce (0-1, default: 0.15)
-   * @param {number} minCount - Minimum particle count (default: 100)
-   * @returns {number} - New particle count
-   */
-  reduceParticleCount(reductionRate = 0.15, minCount = 100) {
-    const newCount = Math.floor(this.count * (1 - reductionRate))
-    const clampedCount = Math.max(newCount, minCount)
+  getMaxCount() {
+    return this.maxCount
+  }
 
-    if (clampedCount < this.count) {
-      this.count = clampedCount
+  setParticleCount(count, minCount = 1) {
+    if (!Number.isFinite(count) || !Number.isFinite(minCount)) {
+      return this.count
     }
-
+    const minimum = Math.min(this.maxCount, Math.max(1, Math.floor(minCount)))
+    this.count = Math.max(minimum, Math.min(this.maxCount, Math.floor(count)))
+    this.particleRenderer.setActiveCount(this.count)
     return this.count
   }
 
-  /**
-   * Dispose resources for cleanup
-   */
+  reduceParticleCount(reductionRate = 0.15, minCount = 100) {
+    const rate = Number.isFinite(reductionRate)
+      ? Math.max(0, Math.min(1, reductionRate))
+      : 0
+    return this.setParticleCount(Math.floor(this.count * (1 - rate)), minCount)
+  }
+
+  restoreParticleCount(recoveryRate = 0.1) {
+    if (!Number.isFinite(recoveryRate)) return this.count
+    const rate = Math.max(0, Math.min(1, recoveryRate))
+    const increase = Math.max(1, Math.ceil(this.maxCount * rate))
+    return this.setParticleCount(Math.min(this.maxCount, this.count + increase))
+  }
+
   dispose() {
-    this.geometry.dispose()
-    this.material.dispose()
+    this.spatialHash.clear()
+    this.particleRenderer.dispose()
+    this.particles.length = 0
   }
 }

@@ -52,8 +52,9 @@ export class Environment {
     this.spatial = {
       type: config.spatial.type,
       particleCount: config.spatial.particleCount,
-      bounds: config.spatial.bounds,
-      initializationFn: config.spatial.initializationFn || null
+      bounds: { ...config.spatial.bounds },
+      initializationFn: config.spatial.initializationFn || null,
+      wrapMode: config.spatial.wrapMode || (config.spatial.type === 'spherical' ? 'spherical' : 'none')
     }
 
     // Behavior parameters
@@ -72,20 +73,24 @@ export class Environment {
       noiseStrength: config.behavior.noiseStrength,
 
       // Mode-specific parameters (optional, mode-dependent)
-      modeParams: config.behavior.modeParams || {}
+      modeParams: config.behavior.modeParams || {},
+      interactionStrength: config.behavior.interactionStrength ?? 1,
+      interactionRadius: config.behavior.interactionRadius ?? 4,
+      interactionMaxSpeed: config.behavior.interactionMaxSpeed ?? 12
     }
 
     // Visual aesthetics
     this.visual = {
-      renderMode: config.visual.renderMode || 'points', // 'points' | 'spheres' | 'trails' | 'mesh'
-      colorPalette: config.visual.colorPalette || null,
+      ...config.visual,
+      renderMode: config.visual.renderMode || 'soft',
+      colorPalette: config.visual.colorPalette ?? null,
       particleSize: config.visual.particleSize,
       opacity: config.visual.opacity,
       sizeAttenuation: config.visual.sizeAttenuation,
 
       // Render mode specific parameters
-      emissive: config.visual.emissive || null,  // Emissive color for glowing spheres
-      emissiveIntensity: config.visual.emissiveIntensity || 0.5 // Glow strength
+      emissive: config.visual.emissive ?? null,
+      emissiveIntensity: config.visual.emissiveIntensity ?? 0.5
     }
 
     // Performance targets
@@ -120,11 +125,37 @@ export class Environment {
     if (!validTypes.includes(this.spatial.type)) {
       throw new Error(`Environment.spatial.type must be one of: ${validTypes.join(', ')}`)
     }
-    if (typeof this.spatial.particleCount !== 'number' || this.spatial.particleCount < 1) {
-      throw new Error('Environment.spatial.particleCount must be a positive number')
+    if (!Number.isInteger(this.spatial.particleCount) || this.spatial.particleCount < 1) {
+      throw new Error('Environment.spatial.particleCount must be a positive integer')
+    }
+    if (this.spatial.particleCount > 65535) {
+      throw new Error('Environment.spatial.particleCount cannot exceed 65535')
     }
     if (!this.spatial.bounds || typeof this.spatial.bounds !== 'object') {
       throw new Error('Environment.spatial.bounds must be an object')
+    }
+    if (this.spatial.initializationFn !== null &&
+        typeof this.spatial.initializationFn !== 'function') {
+      throw new Error('Environment.spatial.initializationFn must be a function or null')
+    }
+    if (this.spatial.type !== 'spherical' && !this.spatial.initializationFn) {
+      throw new Error(`Environment.spatial.type '${this.spatial.type}' requires initializationFn`)
+    }
+    const validWrapModes = ['none', 'spherical']
+    if (!validWrapModes.includes(this.spatial.wrapMode)) {
+      throw new Error(`Environment.spatial.wrapMode must be one of: ${validWrapModes.join(', ')}`)
+    }
+    if (this.spatial.wrapMode === 'spherical') {
+      const { innerRadius, outerRadius } = this.spatial.bounds
+      if (!Number.isFinite(innerRadius) || !Number.isFinite(outerRadius) ||
+          innerRadius < 0 || outerRadius <= innerRadius) {
+        throw new Error('Spherical bounds require 0 <= innerRadius < outerRadius')
+      }
+    }
+
+    const validBehaviorModes = ['flocking', 'orbital', 'spring', 'wave', 'flow', 'rotation', 'brownian']
+    if (!validBehaviorModes.includes(this.behavior.mode)) {
+      throw new Error(`Environment.behavior.mode must be one of: ${validBehaviorModes.join(', ')}`)
     }
 
     // Behavior validation (check all required numeric parameters)
@@ -133,34 +164,65 @@ export class Environment {
       'separationRadius', 'separationWeight', 'maxSpeed', 'noiseScale', 'noiseStrength'
     ]
     for (const param of behaviorParams) {
-      if (typeof this.behavior[param] !== 'number') {
+      if (!Number.isFinite(this.behavior[param])) {
         throw new Error(`Environment.behavior.${param} must be a number`)
       }
+    }
+    const nonNegativeBehaviorParams = [
+      'cohesionRadius', 'cohesionWeight', 'alignmentRadius', 'alignmentWeight',
+      'separationRadius', 'separationWeight', 'maxSpeed', 'noiseScale',
+      'noiseStrength', 'interactionStrength', 'interactionRadius', 'interactionMaxSpeed'
+    ]
+    for (const param of nonNegativeBehaviorParams) {
+      if (!Number.isFinite(this.behavior[param]) || this.behavior[param] < 0) {
+        throw new Error(`Environment.behavior.${param} must be a non-negative number`)
+      }
+    }
+    if (!this.behavior.modeParams || typeof this.behavior.modeParams !== 'object') {
+      throw new Error('Environment.behavior.modeParams must be an object')
     }
 
     // Visual validation
     if (this.visual.colorPalette !== null && !Array.isArray(this.visual.colorPalette)) {
       throw new Error('Environment.visual.colorPalette must be an array or null')
     }
-    if (typeof this.visual.particleSize !== 'number' || this.visual.particleSize <= 0) {
+    if (!Number.isFinite(this.visual.particleSize) || this.visual.particleSize <= 0) {
       throw new Error('Environment.visual.particleSize must be a positive number')
     }
-    if (typeof this.visual.opacity !== 'number' || this.visual.opacity < 0 || this.visual.opacity > 1) {
+    if (!Number.isFinite(this.visual.opacity) || this.visual.opacity < 0 || this.visual.opacity > 1) {
       throw new Error('Environment.visual.opacity must be a number between 0 and 1')
     }
     if (typeof this.visual.sizeAttenuation !== 'boolean') {
       throw new Error('Environment.visual.sizeAttenuation must be a boolean')
     }
+    const validRenderModes = ['soft', 'glow', 'stars', 'lattice', 'trails', 'surface', 'hypercube']
+    if (!validRenderModes.includes(this.visual.renderMode)) {
+      throw new Error(`Environment.visual.renderMode must be one of: ${validRenderModes.join(', ')}`)
+    }
+    if (this.visual.colorPalette && this.visual.colorPalette.length === 0) {
+      throw new Error('Environment.visual.colorPalette cannot be empty')
+    }
+    if (this.visual.pointScale !== undefined &&
+        (!Number.isFinite(this.visual.pointScale) || this.visual.pointScale <= 0)) {
+      throw new Error('Environment.visual.pointScale must be a positive number')
+    }
+    if (!Number.isFinite(this.visual.emissiveIntensity) ||
+        this.visual.emissiveIntensity < 0) {
+      throw new Error('Environment.visual.emissiveIntensity must be a non-negative number')
+    }
 
     // Performance validation
-    if (typeof this.performance.targetFPS !== 'number' || this.performance.targetFPS <= 0) {
+    if (!Number.isFinite(this.performance.targetFPS) || this.performance.targetFPS <= 0) {
       throw new Error('Environment.performance.targetFPS must be a positive number')
     }
-    if (typeof this.performance.minFPS !== 'number' || this.performance.minFPS <= 0) {
+    if (!Number.isFinite(this.performance.minFPS) || this.performance.minFPS <= 0) {
       throw new Error('Environment.performance.minFPS must be a positive number')
     }
     if (typeof this.performance.adaptiveQuality !== 'boolean') {
       throw new Error('Environment.performance.adaptiveQuality must be a boolean')
+    }
+    if (this.performance.minFPS > this.performance.targetFPS) {
+      throw new Error('Environment.performance.minFPS cannot exceed targetFPS')
     }
   }
 
@@ -177,14 +239,16 @@ export class Environment {
         type: this.spatial.type,
         particleCount: this.spatial.particleCount,
         bounds: { ...this.spatial.bounds },
-        initializationFn: this.spatial.initializationFn
+        initializationFn: this.spatial.initializationFn,
+        wrapMode: this.spatial.wrapMode
       },
-      behavior: { ...this.behavior },
+      behavior: {
+        ...this.behavior,
+        modeParams: this.cloneValue(this.behavior.modeParams)
+      },
       visual: {
-        colorPalette: this.visual.colorPalette ? [...this.visual.colorPalette] : null,
-        particleSize: this.visual.particleSize,
-        opacity: this.visual.opacity,
-        sizeAttenuation: this.visual.sizeAttenuation
+        ...this.visual,
+        colorPalette: this.visual.colorPalette ? [...this.visual.colorPalette] : null
       },
       performance: { ...this.performance }
     })
@@ -203,11 +267,24 @@ export class Environment {
         type: this.spatial.type,
         particleCount: this.spatial.particleCount,
         bounds: this.spatial.bounds,
+        wrapMode: this.spatial.wrapMode,
         initializationFn: this.spatial.initializationFn ? '[Function]' : null
       },
       behavior: this.behavior,
       visual: this.visual,
       performance: this.performance
     }
+  }
+
+  cloneValue(value) {
+    if (value === null || typeof value !== 'object') return value
+    if (typeof value.clone === 'function') return value.clone()
+    if (Array.isArray(value)) return value.map(item => this.cloneValue(item))
+
+    const clone = {}
+    for (const [key, item] of Object.entries(value)) {
+      clone[key] = this.cloneValue(item)
+    }
+    return clone
   }
 }

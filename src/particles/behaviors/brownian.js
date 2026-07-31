@@ -15,7 +15,13 @@ import * as THREE from 'three'
  * @param {number} config.driftStrength - Drift force strength
  * @param {number} delta - Time delta
  */
-export function applyBrownianMotion(particle, config, delta) {
+export function applyBrownianMotion(
+  particle,
+  config,
+  delta,
+  rng = null,
+  randomForce = new THREE.Vector3()
+) {
   const {
     speed = 0.5,
     damping = 0.98,
@@ -24,10 +30,13 @@ export function applyBrownianMotion(particle, config, delta) {
   } = config
 
   // Random walk force (Brownian motion)
-  const randomForce = new THREE.Vector3(
-    (Math.random() - 0.5) * speed,
-    (Math.random() - 0.5) * speed,
-    (Math.random() - 0.5) * speed
+  const random = rng && typeof rng.random === 'function'
+    ? () => rng.random()
+    : Math.random
+  randomForce.set(
+    (random() - 0.5) * speed,
+    (random() - 0.5) * speed,
+    (random() - 0.5) * speed
   )
 
   // Apply random force
@@ -35,10 +44,9 @@ export function applyBrownianMotion(particle, config, delta) {
 
   // Optional drift (for directional cloud movement)
   if (driftDirection) {
-    const drift = driftDirection.clone().multiplyScalar(driftStrength * delta)
-    particle.velocity.add(drift)
+    particle.velocity.addScaledVector(driftDirection, driftStrength * delta)
   }
 
   // Velocity damping (prevents runaway speeds)
-  particle.velocity.multiplyScalar(damping)
+  particle.velocity.multiplyScalar(Math.pow(damping, delta * 72))
 }

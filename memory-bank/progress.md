@@ -1,8 +1,19 @@
 # Progress
 
-**Last Updated**: 2025-10-28
-**Project Status**: VR Environments In Progress (2/8 tasks complete)
-**Phase**: VR Environments (VR-01, VR-02 complete, VR-first architecture established)
+**Last Updated**: 2026-07-31
+**Project Status**: Full Experience Upgrade complete and approved
+**Phase**: Publication and headset validation
+
+## Current Status - FULL EXPERIENCE UPGRADE COMPLETE ✅
+
+- ✅ Accessible non-XR landing page and live preview
+- ✅ Seven shareable environments with canonical scene URLs
+- ✅ Progressive WebXR entry, immersive onboarding, hand/controller interaction, and generated audio
+- ✅ Shader-driven particle rendering, spatial hashing, transitions, and adaptive quality
+- ✅ Automated lint, coverage, build, bundle, browser, accessibility, performance, and security gates
+- ✅ User visual review approved for publication
+- ⏳ Firefox Playwright launcher requires environment follow-up; Chromium and WebKit suites pass
+- ⏳ Target-headset validation before merge
 
 ## Current Status - MVP COMPLETE ✅
 
